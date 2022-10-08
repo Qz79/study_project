@@ -3,5 +3,5 @@
 #include"vlc.h"
 int main()
 {
-    std::cout << "Hello World!\n";
+    std::cout << "Hello World!\n";//注释测试
 }
