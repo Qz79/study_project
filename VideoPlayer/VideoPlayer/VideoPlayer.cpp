@@ -25,7 +25,12 @@ int main()
 			printf("eeror found\r\n");
 			break;
 		}
-		Sleep(300);
+		int vol = -1;
+		while (vol == -1) {
+			Sleep(10);
+			vol = libvlc_audio_get_volume(player);
+		}
+		printf("volume is:%d\r\n", vol);
 		libvlc_time_t tm = libvlc_media_player_get_length(player);//tm记录的是毫秒
 		printf("%02d:%02d:%02d，%03d", int(tm / 3600000), int(tm / 60000) % 60, int(tm / 1000) % 60, int(tm % 1000));
 		int width = libvlc_video_get_width(player);
