@@ -30,7 +30,21 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+private:
+	bool m_status_btnPlay; //标记播放按钮状态bool变量
 public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnDestroy();
+	CEdit m_video;         //视频显示框的变量
+	CSliderCtrl m_position;//播放滑动条变量
+	CSliderCtrl m_volume;  //音量滑动条变量
+	CEdit m_url;           //播放地址显示框变量
+	CButton m_btnPlay;     //播放按钮变量
+	afx_msg void OnBnClickedBtnPlay();
+	afx_msg void OnBnClickedBtnStop();
+
+
+	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+	afx_msg void OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+
 };
