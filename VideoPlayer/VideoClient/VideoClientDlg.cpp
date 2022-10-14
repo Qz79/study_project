@@ -60,7 +60,7 @@ BOOL CVideoClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	SetTimer(0, 500, NULL);
-	m_position.SetRange(0, 100);
+	m_position.SetRange(0, 1);
 	m_volume.SetRange(0, 100);
 	m_position.SetTicFreq(20);
 	SetDlgItemText(IDC_STATIC_VOL, _T("100%"));
@@ -113,14 +113,20 @@ void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
 		//Controller获取播放状态以及进度信息
+
 		float pos = m_controller->VideoCtrl(VLC_GET_POSITION);
+		TRACE("pos:%f\r\n", pos);
 		if (pos != -1.0f) {
-			if (m_length <= 0.0f)m_controller->VideoCtrl(VLC_GET_LENGTH);
+			if (m_length <= 0.0f)
+				m_length=m_controller->VideoCtrl(VLC_GET_LENGTH);
 			//m_position的长度需要判断设置
-			m_position.SetRange(0, int(m_length));
-			CString strPos;
+			TRACE("length:%f\r\n", m_length);
+			if (m_position.GetRangeMax() <= 1) {
+				m_position.SetRange(0, int(m_length));
+			}
+            CString strPos;
 			//这里需要学习Format的用法
-			strPos.Format(_T("%f/%f"), pos*int(m_length), m_length);
+			strPos.Format(_T("%f/%f"), pos*m_length, m_length);
 			//这里需要了解SetDlgItemText的用法
 			SetDlgItemText(IDC_STATIC_TIME, strPos);
 			m_position.SetPos(int(m_length *pos));
@@ -146,6 +152,7 @@ void CVideoClientDlg::OnDestroy()
 void CVideoClientDlg::OnBnClickedBtnPlay()
 {
 	if (m_status_btnPlay == false) {
+		
 		CString url;
 		m_url.GetWindowText(url);
 		//判断一下当前是否为恢复

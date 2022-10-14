@@ -46,23 +46,18 @@ float ClientController::VideoCtrl(VLCFUNC cmd)
 {
 	switch (cmd) {
 	case VLC_PLAY:
-		float(m_vlc.Play());
-		break;
+		return float(m_vlc.Play());
 	case VLC_PAUSE:
-		float(m_vlc.Pause());
-		break;
+		return float(m_vlc.Pause());
 	case VLC_STOP:
-		float(m_vlc.Stop());
-		break;
+		return float(m_vlc.Stop());
 	case VLC_GET_VOLUME:
-		float(m_vlc.GetVolume());
-		break;
+		return float(m_vlc.GetVolume());
 	case VLC_GET_POSITION:
-		m_vlc.GetPosition();
-		break;
+		return m_vlc.GetPosition();
 	case VLC_GET_LENGTH:
-		m_vlc.GetLength();
-		break;
+		return m_vlc.GetLength();
+	
 	default:
 		break;
 	}
