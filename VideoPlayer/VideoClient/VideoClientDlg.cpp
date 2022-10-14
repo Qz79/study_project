@@ -22,6 +22,7 @@ CVideoClientDlg::CVideoClientDlg(CWnd* pParent /*=nullptr*/)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_status_btnPlay = false;
+	m_length = 0.0f;
 }
 
 void CVideoClientDlg::DoDataExchange(CDataExchange* pDX)
@@ -61,10 +62,11 @@ BOOL CVideoClientDlg::OnInitDialog()
 	SetTimer(0, 500, NULL);
 	m_position.SetRange(0, 100);
 	m_volume.SetRange(0, 100);
-	m_position.SetTic(10);
 	m_position.SetTicFreq(20);
 	SetDlgItemText(IDC_STATIC_VOL, _T("100%"));
 	SetDlgItemText(IDC_STATIC_TIME, _T("--:--:--/--:--:--"));
+	m_controller->SetHwnd(m_video.GetSafeHwnd());
+	m_url.SetWindowText(_T("file:///F:\\Users\\NING MEI\\source\\study_project\\VideoPlayer\\VideoClient\\远程控制.mp4"));
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -113,11 +115,15 @@ void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 		//Controller获取播放状态以及进度信息
 		float pos = m_controller->VideoCtrl(VLC_GET_POSITION);
 		if (pos != -1.0f) {
+			if (m_length <= 0.0f)m_controller->VideoCtrl(VLC_GET_LENGTH);
+			//m_position的长度需要判断设置
+			m_position.SetRange(0, int(m_length));
 			CString strPos;
 			//这里需要学习Format的用法
-			strPos.Format(_T("%f"), pos);
+			strPos.Format(_T("%f/%f"), pos*int(m_length), m_length);
 			//这里需要了解SetDlgItemText的用法
 			SetDlgItemText(IDC_STATIC_TIME, strPos);
+			m_position.SetPos(int(m_length *pos));
 		}
 		//IDC_STATIC_VOL更新处理音量
 		//IDC_STATIC_TIME 更新播放时间
@@ -172,10 +178,10 @@ void CVideoClientDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nSBCode == 5) {
 		TRACE("pos %p volume %p cur %p pos %d\r\n", &m_position, &m_volume, pScrollBar, nPos);
-		CString strVolume;
-		strVolume.Format(_T("%d%%"),  nPos);
-		SetDlgItemText(IDC_STATIC_TIME, strVolume);
-		m_controller->SetPosition(nPos);
+		CString strPostion;
+		strPostion.Format(_T("%d%%"),  nPos);
+		SetDlgItemText(IDC_STATIC_TIME, strPostion);
+		m_controller->SetPosition(float(nPos)/m_length);
 	}
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 }

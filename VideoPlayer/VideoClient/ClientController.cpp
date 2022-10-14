@@ -61,6 +61,7 @@ float ClientController::VideoCtrl(VLCFUNC cmd)
 		m_vlc.GetPosition();
 		break;
 	case VLC_GET_LENGTH:
+		m_vlc.GetLength();
 		break;
 	default:
 		break;

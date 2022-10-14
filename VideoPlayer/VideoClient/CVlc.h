@@ -36,13 +36,20 @@ public:
 	int GetVolume();
 	void SetPosition(float pos);
 	float GetPosition();
+	float GetLength();
 	VlcSize GetMediaInfo();
 	std::string Unicode2Utf8(const std::wstring& strIn);
+#ifdef WIN32
 	int SetHwnd(HWND hWnd);
+#endif // WIN32
 private:
 	libvlc_instance_t* m_instance;
 	libvlc_media_t* m_media;
 	libvlc_media_player_t* m_player;
+	std::string m_strUrl;
+#ifdef WIN32
+	HWND m_hwnd;
+#endif 
 };
 
 //运算符重载和拷贝构造需要增加理解和练习
