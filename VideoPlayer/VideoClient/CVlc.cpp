@@ -84,7 +84,7 @@ void CVlc::SetPosition(float pos)
 
 float CVlc::GetPosition()
 {
-    if (!m_instance || !m_media || !m_player)return -1.0;
+    if (!m_instance || !m_media || !m_player)return -1.0f;
     return libvlc_media_player_get_position(m_player);
 }
 
@@ -95,4 +95,13 @@ VlcSize CVlc::GetMediaInfo()
         libvlc_video_get_width(m_player) , 
         libvlc_video_get_height(m_player)
     );
+}
+
+std::string CVlc::Unicode2Utf8(const std::wstring& strIn)
+{
+    std::string str;
+    int length = ::WideCharToMultiByte(CP_UTF8, 0, strIn.c_str(), strIn.size(), NULL, 0, NULL, NULL);
+    str.resize(length + 1);
+    ::WideCharToMultiByte(CP_UTF8, 0, strIn.c_str(), strIn.size(), (LPSTR)str.c_str(), str.size(), NULL, NULL);
+    return str;
 }

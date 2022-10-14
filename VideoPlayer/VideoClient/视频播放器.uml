@@ -70,7 +70,7 @@
 <XPD:OBJ name="NameCompartment" type="UMLNameCompartmentView" guid="mpnB9PR24EeIqqYF7csl6gAA">
 <XPD:OBJ name="NameLabel" type="LabelView" guid="MN7YlpHVnk2CMO9g4dSdnwAA">
 <XPD:ATTR name="FontStyle" type="integer">1</XPD:ATTR>
-<XPD:ATTR name="Text" type="string">CClientController</XPD:ATTR>
+<XPD:ATTR name="Text" type="string">ClientController</XPD:ATTR>
 </XPD:OBJ>
 <XPD:OBJ name="StereotypeLabel" type="LabelView" guid="7yiLn/PJakGaFaNSRLXfmAAA">
 <XPD:ATTR name="Visible" type="boolean">False</XPD:ATTR>
@@ -96,7 +96,7 @@
 <XPD:ATTR name="Left" type="integer">528</XPD:ATTR>
 <XPD:ATTR name="Top" type="integer">144</XPD:ATTR>
 <XPD:ATTR name="Width" type="integer">167</XPD:ATTR>
-<XPD:ATTR name="Height" type="integer">121</XPD:ATTR>
+<XPD:ATTR name="Height" type="integer">134</XPD:ATTR>
 <XPD:REF name="Model">9FDLaYJickCDnbdojNxk6wAA</XPD:REF>
 <XPD:OBJ name="NameCompartment" type="UMLNameCompartmentView" guid="94xTHxMdXECTO1DdYIpSDwAA">
 <XPD:OBJ name="NameLabel" type="LabelView" guid="Z3N8HqhEBkmC6xlINfqNTQAA">
@@ -257,7 +257,7 @@
 <XPD:REF name="Instances[0]">gWD8aBXI70O4RbSjJ8HnmgAA</XPD:REF>
 </XPD:OBJ>
 <XPD:OBJ name="OwnedElements[1]" type="UMLClass" guid="tv146yNsIEWKZVOMbAwABAAA">
-<XPD:ATTR name="Name" type="string">CClientController</XPD:ATTR>
+<XPD:ATTR name="Name" type="string">ClientController</XPD:ATTR>
 <XPD:REF name="Namespace">BG4SNL3VO0i/1uNCYwDkmwAA</XPD:REF>
 <XPD:ATTR name="#Views" type="integer">4</XPD:ATTR>
 <XPD:REF name="Views[0]">XucGZqpa6kuyDlXlkCapMAAA</XPD:REF>
@@ -542,9 +542,9 @@
 <XPD:ATTR name="Name" type="string">GetMediaInfo</XPD:ATTR>
 <XPD:REF name="Owner">FRCdWGUruke06QVaMQtt7gAA</XPD:REF>
 <XPD:ATTR name="#Parameters" type="integer">1</XPD:ATTR>
-<XPD:OBJ name="Parameters[0]" type="UMLParameter" guid="gdc9nkP5zk6ywiq+MNl/9QAA">
+<XPD:OBJ name="Parameters[0]" type="UMLParameter" guid="s3vNMPO6GEya0FnvAy6j6AAA">
 <XPD:ATTR name="DirectionKind" type="UMLParameterDirectionKind">pdkReturn</XPD:ATTR>
-<XPD:ATTR name="TypeExpression" type="string">CSzie</XPD:ATTR>
+<XPD:ATTR name="TypeExpression" type="string">VlcSzie</XPD:ATTR>
 <XPD:REF name="BehavioralFeature">0LA3GQir+kSZMVDlB25bEQAA</XPD:REF>
 </XPD:OBJ>
 <XPD:ATTR name="#CallActions" type="integer">1</XPD:ATTR>
@@ -652,6 +652,13 @@
 </XPD:OBJ>
 <XPD:ATTR name="#TypedFeatures" type="integer">1</XPD:ATTR>
 <XPD:REF name="TypedFeatures[0]">3j0Z+bYLK0KPrCN2hs0xtgAA</XPD:REF>
+<XPD:ATTR name="#Attributes" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="Attributes[0]" type="UMLAttribute" guid="MbeqraBwk0ShPqSbWDIZ8wAA">
+<XPD:ATTR name="Name" type="string">m_controller</XPD:ATTR>
+<XPD:ATTR name="Visibility" type="UMLVisibilityKind">vkProtected</XPD:ATTR>
+<XPD:ATTR name="TypeExpression" type="string">ClientController*</XPD:ATTR>
+<XPD:REF name="Owner">9FDLaYJickCDnbdojNxk6wAA</XPD:REF>
+</XPD:OBJ>
 <XPD:ATTR name="#Instances" type="integer">1</XPD:ATTR>
 <XPD:REF name="Instances[0]">GOTfWDHO9kuoz68ZDPhQagAA</XPD:REF>
 </XPD:OBJ>

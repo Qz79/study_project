@@ -4,6 +4,7 @@
 
 #pragma once
 
+class ClientController;
 
 // CVideoClientDlg 对话框
 class CVideoClientDlg : public CDialogEx
@@ -24,7 +25,8 @@ public:
 // 实现
 protected:
 	HICON m_hIcon;
-
+	
+protected:
 	// 生成的消息映射函数
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
@@ -42,9 +44,8 @@ public:
 	CButton m_btnPlay;     //播放按钮变量
 	afx_msg void OnBnClickedBtnPlay();
 	afx_msg void OnBnClickedBtnStop();
-
-
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	afx_msg void OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
-
+public:
+	ClientController* m_controller;
 };

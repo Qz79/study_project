@@ -7,7 +7,7 @@
 #include "VideoClient.h"
 #include "VideoClientDlg.h"
 #include "afxdialogex.h"
-
+#include"ClientController.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -111,6 +111,14 @@ void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
 		//Controller获取播放状态以及进度信息
+		float pos = m_controller->VideoCtrl(VLC_GET_POSITION);
+		if (pos != -1.0f) {
+			CString strPos;
+			//这里需要学习Format的用法
+			strPos.Format(_T("%f"), pos);
+			//这里需要了解SetDlgItemText的用法
+			SetDlgItemText(IDC_STATIC_TIME, strPos);
+		}
 		//IDC_STATIC_VOL更新处理音量
 		//IDC_STATIC_TIME 更新播放时间
 	}
@@ -132,14 +140,20 @@ void CVideoClientDlg::OnDestroy()
 void CVideoClientDlg::OnBnClickedBtnPlay()
 {
 	if (m_status_btnPlay == false) {
+		CString url;
+		m_url.GetWindowText(url);
+		//判断一下当前是否为恢复
+		m_controller->SetMedia(m_controller->Unicode2Utf8((LPCTSTR)url));
 		m_btnPlay.SetWindowText(_T("暂停"));
 		m_status_btnPlay = true;
 		//TODO:Controller的播放接口
+		m_controller->VideoCtrl(VLC_PLAY);
 	}
 	else {
 		m_btnPlay.SetWindowText(_T("播放"));
 		m_status_btnPlay = false;
 		//TODO:Controller的暂停接口
+		m_controller->VideoCtrl(VLC_PAUSE);
 	}
 }
 
@@ -149,6 +163,7 @@ void CVideoClientDlg::OnBnClickedBtnStop()
 	m_btnPlay.SetWindowText(_T("播放"));
 	m_status_btnPlay = false;
 	//TODO:Controller的停止接口
+	m_controller->VideoCtrl(VLC_STOP);
 }
 
 
@@ -160,6 +175,7 @@ void CVideoClientDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 		CString strVolume;
 		strVolume.Format(_T("%d%%"),  nPos);
 		SetDlgItemText(IDC_STATIC_TIME, strVolume);
+		m_controller->SetPosition(nPos);
 	}
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 }
@@ -173,6 +189,7 @@ void CVideoClientDlg::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 		CString strVolume;
 		strVolume.Format(_T("%d%%"), 100-nPos);
 		SetDlgItemText(IDC_STATIC_VOL, strVolume);
+		m_controller->SetVolume(100 - nPos);
 	}
 	CDialogEx::OnVScroll(nSBCode, nPos, pScrollBar);
 }

@@ -29,7 +29,6 @@ public:
 	CVlc();
 	~CVlc();
 	int SetMedia(const std::string& strUrl);
-	int SetHwnd(HWND hWnd);
 	int Play();
 	int Pause();
 	int Stop();
@@ -38,6 +37,8 @@ public:
 	void SetPosition(float pos);
 	float GetPosition();
 	VlcSize GetMediaInfo();
+	std::string Unicode2Utf8(const std::wstring& strIn);
+	int SetHwnd(HWND hWnd);
 private:
 	libvlc_instance_t* m_instance;
 	libvlc_media_t* m_media;
