@@ -11,7 +11,7 @@
 
 
 // 唯一的应用程序对象
-
+// 001测试分支切换演示
 CWinApp theApp;
 
 using namespace std;
