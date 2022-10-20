@@ -6,3 +6,9 @@
 /VideoPlayer/VideoPlayer/Debug
 /VideoPlayer/VideoClient/Debug
 /VideoPlayer/VideoClient/远程控制.mp4
+/RemoteCtrl/.vs
+/RemoteCtrl/Debug
+/RemoteCtrl/RemoteClient/Debug
+/RemoteCtrl/RemoteCtrl/Debug
+/RemoteCtrl/RemoteClient/*.user
+/RemoteCtrl/RemoteCtrl/RemoteCtrl.vcxproj.user
