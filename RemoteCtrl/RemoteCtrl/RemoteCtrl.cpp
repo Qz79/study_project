@@ -2,8 +2,8 @@
 //
 
 #include "pch.h"
-#include "framework.h"
 #include "RemoteCtrl.h"
+#include"ServerSocket.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -36,30 +36,25 @@ int main()
             // TODO: 在此处为应用程序的行为编写代码。
             // socket、bind、liten、accpet、read、write、close
             // 初始化环境，Windows下面有一个环境的初始化的，用到WSADATA
-            WSADATA wsadata;
-            WSAStartup(MAKEWORD(1, 1), &wsadata);//TODO:返回值需要处理
-            SOCKET serv_sock = socket(PF_INET, SOCK_STREAM, 0);
-            //TODO:返回值需要验证
-            sockaddr_in serv_addr;
-            memset(&serv_addr, 0, sizeof(serv_addr));//对结构体变量初始化
-            serv_addr.sin_family = AF_INET;
-            serv_addr.sin_addr.s_addr = INADDR_ANY;
-            serv_addr.sin_port = htons(9527);
-            bind(serv_sock, (sockaddr*)&serv_addr, sizeof(serv_addr));
-            //TODO:返回值需要验证
-            listen(serv_sock, 1);
-            //TODO:返回值需要验证
-            sockaddr_in cli_addr;
-            memset(&cli_addr, 0, sizeof(cli_addr));
-            int length = sizeof(cli_addr);
-            SOCKET cli_sock=accept(serv_sock, (sockaddr*)&cli_addr, &length);
-            char buffer[1024];
-            memset(&buffer, '0', 1024);
-            recv(cli_sock, buffer, sizeof(buffer), 0);
-            send(cli_sock, buffer, sizeof(buffer), 0);
-            closesocket(cli_sock);
-            closesocket(serv_sock);
-            WSACleanup();
+            CServerSocket*pserver=CServerSocket::getInstance();
+            if (CServerSocket::getInstance()!= NULL) {
+                if (pserver->InitSocket() == false) {
+                    MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
+                    exit(0);
+                }
+            }
+            int count = 0;
+            while (pserver) {
+                if (pserver->AcceptClient() == false) {
+                    if (count >= 3) {
+                        MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
+                        exit(0);
+                    }
+                    MessageBox(NULL, _T("客户端连接异常,自动重试中"), _T("提示"), MB_OK | MB_ICONERROR);
+                    count++;
+                }  
+                int ret = pserver->DealCommand();//TODO:
+            }
         }
     }
     else
