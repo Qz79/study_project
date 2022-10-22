@@ -1,6 +1,77 @@
 #pragma once
 #include "pch.h"
 #include "framework.h"
+#include<string>
+class CPacket {
+public:
+	CPacket():sHead(0),nLength(0),sCmd(0),sSum(0){}
+	CPacket(const CPacket& pack) {
+		sHead = pack.sHead;
+		nLength = pack.nLength;
+		sCmd = pack.sCmd;
+		strData = pack.strData;
+		sSum = pack.sSum;
+	}
+	//BYTE = unsigned char ,size_t =unsigned int ;
+	//nSize 作为传入传出参数，传入时为data的长度，传出是用掉了多少
+	CPacket(const BYTE* pData,size_t& nSize) 
+	{
+		size_t i = 0;
+		for (; i < nSize; i++) {
+			if (*(WORD*)(pData + i) == 0xFEFF) {
+				sHead = *(WORD*)(pData + i);
+				i += 2;
+				break;
+			}
+		}
+		if (i + 4 + 2 + 2 > nSize) {
+			nSize = 0;
+			return;
+		}
+		nLength = *(WORD*)(pData + i);
+		i += 4;
+		if (nLength+i > nSize) {
+			nSize = 0;
+			return;
+		}
+		sCmd = *(WORD*)(pData + i);
+		i += 2;
+		if (nLength > 4) {
+			strData.resize(nLength - 2 - 2);
+			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
+			i += nLength-4;
+		}
+		sSum= *(WORD*)(pData + i);
+		i += 2;
+		WORD sum = 0;
+		for (size_t j = 0; j < strData.size(); j++) {
+			sum += BYTE(strData[i]) & 0xFF;
+		}
+		if (sum == sSum) {
+			nSize = i;
+			return;
+		}
+		nSize = 0;
+	}
+	~CPacket(){}
+	CPacket& operator=(const CPacket& pack) {
+		if (this != &pack) {
+			sHead = pack.sHead;
+			nLength = pack.nLength;
+			sCmd = pack.sCmd;
+			strData = pack.strData;
+			sSum = pack.sSum;
+		}
+		return *this;
+	}
+public:
+	// WORD = unsigned short（2个字节）  DWORD = unsigend long（4个字节）
+	WORD sHead;       //数据包包头 固定FEFF
+	DWORD nLength;    //数据长度，从控制命令开始到和校验结束
+	WORD sCmd;        //控制命令
+	std::string strData; // 包数据
+	WORD sSum;           // 和校验
+};
 class CServerSocket
 {
 public:
@@ -32,17 +103,30 @@ public:
 		return true;
 		//closesocket(cli_sock);//TODO:链接客户端的套接字什么时候释放？
 	}
+#define BUFFER_SIZE 4096
 	int  DealCommand() {
 		//处理链接
-		if (m_clisock == -1)return false;
-		char buffer[1024] = "";
+		if (m_clisock == -1)return -1;
+		char* buffer = new char[BUFFER_SIZE];
+		memset(buffer, 0, BUFFER_SIZE);
+		size_t index = 0;//标记缓冲区buffer的下标
 		while (true) {
-			int len=recv(m_clisock, buffer, sizeof(buffer), 0);
+			//len 接收到数据的大小
+			size_t len=recv(m_clisock, buffer+index, BUFFER_SIZE -index, 0);
 			if (len <= 0) {
 				return -1;
 			}
+			index += len;
+			len = index;
 			//TODO:处理命令
+			m_packet = CPacket ((BYTE*)buffer, len);
+			if (len > 0) {
+				memmove(buffer, buffer + len, BUFFER_SIZE - len);
+				index -= len;
+				return m_packet.sCmd;
+			}
 		}
+		return -1
 	}
 	bool Send(const char* pData, int nSize) {
 		if (m_clisock == -1)return false;
@@ -99,5 +183,6 @@ private:
 	static Helper m_helper;
 	SOCKET m_servsock;
 	SOCKET m_clisock;
+	CPacket m_packet;
 };
 

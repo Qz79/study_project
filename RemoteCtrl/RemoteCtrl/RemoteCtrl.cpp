@@ -8,7 +8,11 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
+// 入口函数改变的代码形式：
+//#pragma comment(linker,"/subsystem:windows/entry:WinMainCTRStartup")
+//#pragma comment(linker,"/subsystem:windows/entry:mainCTRStartup")
+//#pragma comment(linker,"/subsystem:console/entry:WinMainCTRStartup")
+//#pragma comment(linker,"/subsystem:console/entry:mainCTRStartup")
 
 // 唯一的应用程序对象
 // 001测试分支切换演示
@@ -37,14 +41,12 @@ int main()
             // socket、bind、liten、accpet、read、write、close
             // 初始化环境，Windows下面有一个环境的初始化的，用到WSADATA
             CServerSocket*pserver=CServerSocket::getInstance();
-            if (CServerSocket::getInstance()!= NULL) {
-                if (pserver->InitSocket() == false) {
-                    MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
-                    exit(0);
-                }
+            if (pserver->InitSocket() == false) {
+                MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
+                exit(0);
             }
             int count = 0;
-            while (pserver) {
+            while (CServerSocket::getInstance() != NULL) {
                 if (pserver->AcceptClient() == false) {
                     if (count >= 3) {
                         MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
