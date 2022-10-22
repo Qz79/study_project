@@ -126,7 +126,7 @@ public:
 				return m_packet.sCmd;
 			}
 		}
-		return -1
+		return -1;
 	}
 	bool Send(const char* pData, int nSize) {
 		if (m_clisock == -1)return false;
