@@ -115,6 +115,7 @@ int RunFile() {
     ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
     CPacket pack(3, NULL,0);
     CServerSocket::getInstance()->Send(pack);
+    return 0;
 }
 int DownFile() {
     std::string strPath;
