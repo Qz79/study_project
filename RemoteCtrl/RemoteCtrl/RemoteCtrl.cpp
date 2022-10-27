@@ -70,14 +70,14 @@ int  MakeDirectoryInfo() {
     std::string strPath;
     //std::list<FILEINFO> lstFileInfos;
     if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
-        OutputDebugString(_T("当前命令不是获取文件列表，命令解析错误！"));
+        OutputDebugString(_T("命令解析错误！"));
         return -1;
     }
     if (_chdir(strPath.c_str()) != 0) {
         //_chdir
         FILEINFO finfo;
         finfo.Isinvalid = TRUE;
-        finfo.IsDirectory = TRUE;
+        finfo.IsDirectory = TRUE;//Q：问题，这里为什么是true
         finfo.HasNext = FALSE;
         memcpy(finfo.FileName, strPath.c_str(), strPath.size());
         //lstFileInfos.push_back(finfo);
@@ -87,7 +87,7 @@ int  MakeDirectoryInfo() {
         return -2;
     }
     _finddata_t fdata;
-    int hfind = 0;
+    intptr_t hfind = 0;
     if ((hfind = _findfirst("*", &fdata)) == -1) {
         OutputDebugString(_T("没有找到任何文件"));
         return -3;
@@ -102,6 +102,7 @@ int  MakeDirectoryInfo() {
     } while (!_findnext(hfind, &fdata));
     FILEINFO finfo;
     finfo.HasNext = FALSE;
+    _findclose(hfind);
     CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
     CServerSocket::getInstance()->Send(pack);
     return 0;
@@ -133,6 +134,7 @@ int DownFile() {
     }
     if (pFile != NULL) {
         fseek(pFile, 0, SEEK_END);
+        //_ftelli64 获取文件指针当前未知
         data = _ftelli64(pFile);
         CPacket head(4, (BYTE*)&data, 8);
         fseek(pFile, 0, SEEK_SET);
@@ -147,6 +149,96 @@ int DownFile() {
     }    
     CPacket pack(4, NULL, 0);
     CServerSocket::getInstance()->Send(pack); 
+    return 0;
+}
+int MoueEvent() {
+    MOUSEEV mouse;
+    if (CServerSocket::getInstance()->MoueEvent(mouse)) {
+        
+        int flags = 0;
+        switch (mouse.nButton) {
+        case 0://左键
+            flags = 1;
+            break;
+        case 1://右键
+            flags = 2;
+            break;
+        case 2://中建
+            flags = 4;
+            break;
+        case 4://没有按键
+            flags = 8;
+            break;
+        }
+        if(flags!=8)SetCursorPos(mouse.pointXY.x, mouse.pointXY.y);
+        switch (mouse.nAction) {
+        case 0://单击
+            flags |= 0x10;
+            break;
+        case 1://双击
+            flags |= 0x20;
+            break;
+        case 2://按下
+            flags |= 0x40;
+            break;
+        case 3://放开
+            flags |= 0x80;
+            break;
+        default:
+            break;
+        }
+        switch (flags) {
+        case 0x21://左键双击
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+        case 0x11:// 左键单击
+            //mouse_event()模拟鼠标操作的API，GetMessageExtraInfo()获取键盘鼠标的额外信息
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x41://左键按下
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x81:// 左键放开
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x22://右键双击
+            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+        case 0x12:// 右键单击
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;    
+        case 0x42://右键按下
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x82:// 右键放开
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x24: // 中键双击
+            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+        case 0x14:// 中键单击
+            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+            break;       
+        case 0x44: // 中键按下
+            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x84: //  中键放开
+            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x08: //单纯的移动
+            mouse_event(MOUSEEVENTF_MOVE, mouse.pointXY.x, mouse.pointXY.y, 0, GetMessageExtraInfo());
+            break;
+        }
+        CPacket pack(5, NULL, 0);
+        CServerSocket::getInstance()->Send(pack);
+    }
+    else {
+        OutputDebugString(_T("鼠标命令获取失败！"));
+        return -1;
+    }
     return 0;
 }
 int main()
@@ -199,6 +291,9 @@ int main()
                 break;
             case 4:
                 DownFile();
+                break;
+            case 5:
+                MoueEvent();
                 break;
             }
             

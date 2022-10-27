@@ -109,6 +109,17 @@ public:
 						 所以需要在类中声明一个自己缓冲区，去存储整个包的数据*/
 };
 #pragma pack(pop)
+typedef struct MouseEvent {
+	MouseEvent(){
+		nAction = 0;
+		nButton = -1;
+		pointXY.x = 0;
+		pointXY.y = 0;
+	}
+	WORD nAction;// 移动、双击、单击
+	WORD nButton;//左键、中建、右键
+	POINT pointXY;//坐标
+}MOUSEEV,*PMOUSEEV;
 class CServerSocket
 {
 public:
@@ -176,6 +187,13 @@ public:
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd<=4)) {
 			strPath = m_packet.strData;
+			return true;
+		}
+		return false;
+	}
+	bool MoueEvent(MOUSEEV& mouse) {
+		if (m_packet.sCmd == 5) {
+			memcpy(&mouse, m_packet.strData.c_str(), sizeof(mouse));
 			return true;
 		}
 		return false;
