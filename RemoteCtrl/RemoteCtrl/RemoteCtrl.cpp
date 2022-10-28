@@ -5,6 +5,7 @@
 #include "RemoteCtrl.h"
 #include"ServerSocket.h"
 #include<direct.h>
+#include<atlimage.h>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -241,6 +242,45 @@ int MoueEvent() {
     }
     return 0;
 }
+int SendScreen() {
+    CImage screen; //CImage 位图类
+    HDC hScreen = ::GetDC(NULL); 
+    int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);
+    int nWitdth = GetDeviceCaps(hScreen, HORZRES);
+    int nHeight = GetDeviceCaps(hScreen, VERTRES);
+    screen.Create(nWitdth, nHeight, nBitPerPixel);
+    BitBlt(screen.GetDC(), 0, 0, 1366, 748, hScreen, 0, 0, SRCCOPY);
+    ReleaseDC(NULL, hScreen);
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//申请内存
+    if (hMem == NULL)return -1;
+    IStream* pStream = NULL;                     //流指针
+    HRESULT ret = CreateStreamOnHGlobal(hMem, TRUE, &pStream);//将指针流变为内存流
+    if (ret == S_OK) {
+        screen.Save(pStream, Gdiplus::ImageFormatPNG);//重载函数，将数据变成流的形式
+        LARGE_INTEGER bg = { 0 };
+        pStream->Seek(bg, STREAM_SEEK_SET, NULL);//重置指针到开头，才可读取完成数据
+        PBYTE pData = (PBYTE)GlobalLock(hMem);   //获取数据
+        SIZE_T nSize = GlobalSize(hMem);         //获取数据大小
+        CPacket pack(6, pData, nSize);
+        CServerSocket::getInstance()->Send(pack);
+        GlobalUnlock(hMem);
+    }
+   //screen.Save(_T("test2022.png"), Gdiplus::ImageFormatPNG);
+   //此调用将截图保存到了文件中,想要打包数据就还要从文件中取出再进行打包，所以利用Save重载，将其保存进内存中
+   /* screen.Save(_T("test2022.BMP"), Gdiplus::ImageFormatBMP);*/
+   /* for (int i = 0; i < 10; i++) {
+        DWORD tick = (DWORD)GetTickCount64();
+        screen.Save(_T("test2022.png"), Gdiplus::ImageFormatPNG);
+        TRACE("png %d\r\n", (DWORD)GetTickCount64() - tick);
+        tick = (DWORD)GetTickCount64();
+        screen.Save(_T("test2022.jpg"), Gdiplus::ImageFormatJPEG);
+        TRACE("jpg %d\r\n", (DWORD)GetTickCount64() - tick);
+    }*/
+    pStream->Release();
+    GlobalFree(hMem);
+    screen.ReleaseDC();
+    return 0;
+}
 int main()
 {
     int nRetCode = 0;
@@ -278,7 +318,7 @@ int main()
         //        }  
         //        int ret = pserver->DealCommand();//TODO:
         //    }
-            int nCmd = 1;
+            int nCmd = 6;
             switch (nCmd) {
             case 1:
                 MakeDirverInfo();
@@ -295,6 +335,8 @@ int main()
             case 5:
                 MoueEvent();
                 break;
+            case 6:
+                SendScreen();
             }
             
         }
