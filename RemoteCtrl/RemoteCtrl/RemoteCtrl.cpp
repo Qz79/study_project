@@ -6,6 +6,7 @@
 #include"ServerSocket.h"
 #include<direct.h>
 #include<atlimage.h>
+#include"CLockInFoDialg.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -281,6 +282,26 @@ int SendScreen() {
     screen.ReleaseDC();
     return 0;
 }
+CLockInFoDialg dlg;
+int  LockMachine() {
+    dlg.Create(IDD_DIALOG_INFO, NULL);
+    dlg.ShowWindow(SW_SHOW);
+    dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+        if (msg.message == WM_KEYDOWN) {
+            TRACE("msg:%08x wParam:%08x lParam:%08x\r\n", msg.message, msg.wParam, msg.lParam);
+            if (msg.wParam == 0x1B) break;
+        }
+    }
+    dlg.DestroyWindow();
+    return 0;
+}
+int UnLockMachine() {
+    return 0;
+}
 int main()
 {
     int nRetCode = 0;
@@ -318,7 +339,8 @@ int main()
         //        }  
         //        int ret = pserver->DealCommand();//TODO:
         //    }
-            int nCmd = 6;
+          
+            int nCmd = 7;
             switch (nCmd) {
             case 1:
                 MakeDirverInfo();
@@ -337,6 +359,13 @@ int main()
                 break;
             case 6:
                 SendScreen();
+                break;
+            case 7:
+                LockMachine();
+                break;
+            case 8:
+                UnLockMachine();
+                break;
             }
             
         }
