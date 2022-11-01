@@ -71,7 +71,7 @@ typedef struct file_info {
 int  MakeDirectoryInfo() {
     std::string strPath;
     //std::list<FILEINFO> lstFileInfos;
-    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
+    if (ServerSocket::getInstance()->GetFilePath(strPath) == false) {
         OutputDebugString(_T("命令解析错误！"));
         return -1;
     }
@@ -84,7 +84,7 @@ int  MakeDirectoryInfo() {
         memcpy(finfo.FileName, strPath.c_str(), strPath.size());
         //lstFileInfos.push_back(finfo);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-        CServerSocket::getInstance()->Send(pack);
+        ServerSocket::getInstance()->Send(pack);
         OutputDebugString(_T("没有权限访问目录"));
         return -2;
     }
@@ -100,30 +100,30 @@ int  MakeDirectoryInfo() {
         memcpy(finfo.FileName,fdata.name,strlen(fdata.name));
         //lstFileInfos.push_back(finfo);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-        CServerSocket::getInstance()->Send(pack);
+        ServerSocket::getInstance()->Send(pack);
     } while (!_findnext(hfind, &fdata));
     FILEINFO finfo;
     finfo.HasNext = FALSE;
     _findclose(hfind);
     CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-    CServerSocket::getInstance()->Send(pack);
+    ServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int RunFile() {
     std::string strPath;
-    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
+    if (ServerSocket::getInstance()->GetFilePath(strPath) == false) {
         OutputDebugString(_T("命令解析错误！"));
         return -1;
     }
     ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
     CPacket pack(3, NULL,0);
-    CServerSocket::getInstance()->Send(pack);
+    ServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int DownFile() {
     std::string strPath;
     long long data = 0;
-    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
+    if (ServerSocket::getInstance()->GetFilePath(strPath) == false) {
         OutputDebugString(_T("命令解析错误！"));
         return -1;
     }
@@ -131,7 +131,7 @@ int DownFile() {
     errno_t err=fopen_s(&pFile,strPath.c_str(), "rb");
     if (err != 0) {
         CPacket pack(4,(BYTE*)&data, 8);
-        CServerSocket::getInstance()->Send(pack);
+        ServerSocket::getInstance()->Send(pack);
         return -2;
     }
     if (pFile != NULL) {
@@ -145,17 +145,17 @@ int DownFile() {
         do {
             rlen = fread(buffer, 1, 1024, pFile);
             CPacket pack(4, (BYTE*)buffer, sizeof(buffer));
-            CServerSocket::getInstance()->Send(pack);
+            ServerSocket::getInstance()->Send(pack);
         } while (rlen >= 1024);
         fclose(pFile);
     }    
     CPacket pack(4, NULL, 0);
-    CServerSocket::getInstance()->Send(pack); 
+    ServerSocket::getInstance()->Send(pack); 
     return 0;
 }
 int MoueEvent() {
     MOUSEEV mouse;
-    if (CServerSocket::getInstance()->MoueEvent(mouse)) {
+    if (ServerSocket::getInstance()->MoueEvent(mouse)) {
         
         int flags = 0;
         switch (mouse.nButton) {
@@ -235,7 +235,7 @@ int MoueEvent() {
             break;
         }
         CPacket pack(5, NULL, 0);
-        CServerSocket::getInstance()->Send(pack);
+        ServerSocket::getInstance()->Send(pack);
     }
     else {
         OutputDebugString(_T("鼠标命令获取失败！"));
@@ -263,7 +263,7 @@ int SendScreen() {
         PBYTE pData = (PBYTE)GlobalLock(hMem);   //获取数据
         SIZE_T nSize = GlobalSize(hMem);         //获取数据大小
         CPacket pack(6, pData, nSize);
-        CServerSocket::getInstance()->Send(pack);
+        ServerSocket::getInstance()->Send(pack);
         GlobalUnlock(hMem);
     }
    //screen.Save(_T("test2022.png"), Gdiplus::ImageFormatPNG);
@@ -328,7 +328,7 @@ int  LockMachine() {
         TRACE("threadid=%d\r\n", threadid);
     }
     CPacket pack(7, NULL, 0);
-    CServerSocket::getInstance()->Send(pack);
+    ServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int UnLockMachine() {
@@ -338,7 +338,7 @@ int UnLockMachine() {
     //需要利用下面这个函数去发送消息
     PostThreadMessage(threadid, WM_KEYDOWN, 0x1B,0);
     CPacket pack(8, NULL, 0);
-    CServerSocket::getInstance()->Send(pack);
+    ServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int main()

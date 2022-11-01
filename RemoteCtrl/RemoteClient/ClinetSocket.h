@@ -1,13 +1,12 @@
 #pragma once
-#include "pch.h"
-#include "framework.h"
+
 #include<string>
 
 #pragma pack(push) //让封装类对齐
 #pragma pack(1)
 class CPacket {
 public:
-	CPacket():sHead(0),nLength(0),sCmd(0),sSum(0){}
+	CPacket() :sHead(0), nLength(0), sCmd(0), sSum(0) {}
 	CPacket(const CPacket& pack) {
 		sHead = pack.sHead;
 		nLength = pack.nLength;
@@ -26,7 +25,7 @@ public:
 		else {
 			strData.clear();
 		}
-		
+
 		sSum = 0;
 		for (size_t j = 0; j < strData.size(); j++) {
 			sSum += BYTE(strData[j]) & 0xFF;
@@ -34,7 +33,7 @@ public:
 	}
 	//BYTE = unsigned char ,size_t =unsigned int ;
 	//nSize 作为传入传出参数，传入时为data的长度，传出是用掉了多少
-	CPacket(const BYTE* pData,size_t& nSize) 
+	CPacket(const BYTE* pData, size_t& nSize)
 	{
 		size_t i = 0;
 		for (; i < nSize; i++) {
@@ -50,7 +49,7 @@ public:
 		}
 		nLength = *(WORD*)(pData + i);
 		i += 4;
-		if (nLength+i > nSize) {
+		if (nLength + i > nSize) {
 			nSize = 0;
 			return;
 		}
@@ -59,9 +58,9 @@ public:
 		if (nLength > 4) {
 			strData.resize(nLength - 2 - 2);
 			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
-			i += nLength-4;
+			i += nLength - 4;
 		}
-		sSum= *(WORD*)(pData + i);
+		sSum = *(WORD*)(pData + i);
 		i += 2;
 		WORD sum = 0;
 		for (size_t j = 0; j < strData.size(); j++) {
@@ -73,7 +72,7 @@ public:
 		}
 		nSize = 0;
 	}
-	~CPacket(){}
+	~CPacket() {}
 	CPacket& operator=(const CPacket& pack) {
 		if (this != &pack) {
 			sHead = pack.sHead;
@@ -110,7 +109,7 @@ public:
 };
 #pragma pack(pop)
 typedef struct MouseEvent {
-	MouseEvent(){
+	MouseEvent() {
 		nAction = 0;
 		nButton = -1;
 		pointXY.x = 0;
@@ -119,38 +118,50 @@ typedef struct MouseEvent {
 	WORD nAction;// 移动、双击、单击
 	WORD nButton;//左键、中建、右键
 	POINT pointXY;//坐标
-}MOUSEEV,*PMOUSEEV;
-class ServerSocket
+}MOUSEEV, * PMOUSEEV;
+std::string GetErrorInfo(int wsaErrCode) {
+	std::string ret;
+	LPVOID lpMsgBuf = NULL;
+	FormatMessage(
+		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+		NULL,
+		wsaErrCode,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPSTR)lpMsgBuf, 0, NULL);
+	ret = (char*)lpMsgBuf;
+	LocalFree(lpMsgBuf);
+	return ret;
+}
+class CClinetSocket
 {
 public:
-	static ServerSocket* getInstance() {
+	static CClinetSocket* getInstance() {
 		//静态函数没有this指针，所以无法访问成员变量
 		if (m_istance == NULL) {
-			m_istance = new ServerSocket();
+			m_istance = new CClinetSocket();
 		}
 		return m_istance;
 	}
-	bool InitSocket() {
-		if (m_servsock == -1)return false;
+	bool InitSocket(const std::string& strAddressIP) {
+		if (m_clisock == -1)return false;
 		sockaddr_in serv_addr;
 		memset(&serv_addr, 0, sizeof(serv_addr));//对结构体变量初始化
 		serv_addr.sin_family = AF_INET;
-		serv_addr.sin_addr.s_addr = INADDR_ANY;
+		serv_addr.sin_addr.s_addr = inet_addr(strAddressIP.c_str());
 		serv_addr.sin_port = htons(9527);
-		if (bind(m_servsock, (sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
+		int ret = connect(m_clisock, (sockaddr*)&serv_addr, sizeof(serv_addr));
+		if (serv_addr.sin_addr.s_addr == INVALID_SOCKET) {
+			AfxMessageBox("指定IP不存在");
 			return false;
-		if (listen(m_servsock, 1) == -1)return false;
+		}
+		if (ret == -1) {
+			AfxMessageBox("链接失败！");
+			TRACE("ErrorId:%d ,ErrorMessage:%s\r\n", WSAGetLastError(), GetErrorInfo(WSAGetLastError()).c_str());
+			return false;
+		}
 		return true;
 	}
-	bool AcceptClient() {
-		sockaddr_in cli_addr;
-		memset(&cli_addr, 0, sizeof(cli_addr));
-		int length = sizeof(cli_addr);
-		m_clisock = accept(m_clisock, (sockaddr*)&cli_addr, &length);
-		if (m_clisock == -1)return false;
-		return true;
-		//closesocket(cli_sock);//TODO:链接客户端的套接字什么时候释放？
-	}
+	
 #define BUFFER_SIZE 4096
 	int  DealCommand() {
 		//处理链接
@@ -160,14 +171,14 @@ public:
 		size_t index = 0;//标记缓冲区buffer的下标
 		while (true) {
 			//len 接收到数据的大小
-			size_t len=recv(m_clisock, buffer+index, BUFFER_SIZE -index, 0);
+			size_t len = recv(m_clisock, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0) {
 				return -1;
 			}
 			index += len;
 			len = index;
 			//TODO:处理命令
-			m_packet = CPacket ((BYTE*)buffer, len);
+			m_packet = CPacket((BYTE*)buffer, len);
 			if (len > 0) {
 				memmove(buffer, buffer + len, BUFFER_SIZE - len);
 				index -= len;
@@ -178,14 +189,14 @@ public:
 	}
 	bool Send(const char* pData, int nSize) {
 		if (m_clisock == -1)return false;
-		return send(m_clisock, pData, nSize, 0)>0;
+		return send(m_clisock, pData, nSize, 0) > 0;
 	}
 	bool Send(CPacket& pack) {
 		if (m_clisock == -1)return false;
 		return send(m_clisock, pack.Data(), pack.Size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath) {
-		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd<=4)) {
+		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {
 			strPath = m_packet.strData;
 			return true;
 		}
@@ -199,25 +210,23 @@ public:
 		return false;
 	}
 private:
-	ServerSocket(const ServerSocket& ss){
-		m_servsock = ss.m_servsock;
+	CClinetSocket(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
 	}
-	ServerSocket& operator=(const ServerSocket& ss){
-		m_servsock = ss.m_servsock;
+	CClinetSocket& operator=(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
+	
 	}
-	ServerSocket(){
-		m_servsock = INVALID_SOCKET;
+	CClinetSocket() {
 		m_clisock = INVALID_SOCKET;
 		if (InitSockEnv() == FALSE) {
 			MessageBox(NULL, _T("无法初始套接字环境,请检网络设置"), _T("网络环境初始化失败"), MB_OK | MB_ICONERROR);
 			exit(0);
 		}
-		m_servsock = socket(PF_INET, SOCK_STREAM, 0);//初始化套接字
+		m_clisock = socket(PF_INET, SOCK_STREAM, 0);//初始化套接字
 	}
-	~ServerSocket(){
-		closesocket(m_servsock);
+	~CClinetSocket() {
+		closesocket(m_clisock);
 		WSACleanup();
 	}
 	BOOL InitSockEnv() {
@@ -229,25 +238,24 @@ private:
 	}
 	static void releaseInstance() {
 		if (m_istance != NULL) {
-			ServerSocket* temp = m_istance;
+			CClinetSocket* temp = m_istance;
 			m_istance = NULL;
 			delete temp;
 		}
 	}
 	class Helper {
 	public:
-		Helper(){
-			ServerSocket::getInstance();
+		Helper() {
+			CClinetSocket::getInstance();
 		}
 		~Helper() {
-			ServerSocket::releaseInstance();
+			CClinetSocket::releaseInstance();
 		}
-	
+
 	};
 private:
-	static ServerSocket* m_istance;
+	static CClinetSocket* m_istance;
 	static Helper m_helper;
-	SOCKET m_servsock;
 	SOCKET m_clisock;
 	CPacket m_packet;
 };
