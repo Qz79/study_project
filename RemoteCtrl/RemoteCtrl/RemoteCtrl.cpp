@@ -283,7 +283,10 @@ int SendScreen() {
     return 0;
 }
 CLockInFoDialg dlg;
-int  LockMachine() {
+unsigned threadid;
+//void threadLockDlg(void* arg);
+unsigned __stdcall threadLockDlg(void* arg) {
+    TRACE("%s(%d):%d\r\n", __FUNCTION__, __LINE__, GetCurrentThreadId());
     dlg.Create(IDD_DIALOG_INFO, NULL);
     dlg.ShowWindow(SW_SHOW);
     CRect rect;
@@ -311,11 +314,31 @@ int  LockMachine() {
             if (msg.wParam == 0x1B) break;
         }
     }
-    dlg.DestroyWindow();
+    ShowCursor(true);
     ::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);
+    //_endthread();
+    dlg.DestroyWindow();
+    _endthreadex(0);
+    return 0;
+}
+int  LockMachine() {
+    if ((dlg.m_hWnd == NULL) ||( dlg.m_hWnd == INVALID_HANDLE_VALUE)) {
+        //_beginthread(threadLockDlg, 0, NULL);
+        _beginthreadex(NULL, 0, threadLockDlg, NULL, 0, &threadid);
+        TRACE("threadid=%d\r\n", threadid);
+    }
+    CPacket pack(7, NULL, 0);
+    CServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int UnLockMachine() {
+    //dlg.SendMessage(WM_KEYDOWN, 0x1b, 0x00010001);
+    //::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x1b, 0x00010001);
+    //上面两个函数发送消息无效的原因是，windows消息机制，取消息的消息泵是依赖于当前线程的，所以无效
+    //需要利用下面这个函数去发送消息
+    PostThreadMessage(threadid, WM_KEYDOWN, 0x1B,0);
+    CPacket pack(8, NULL, 0);
+    CServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int main()
@@ -378,11 +401,23 @@ int main()
                 break;
             case 7:
                 LockMachine();
+                /*Sleep(50);
+                LockMachine();*///T0:测试多次调用线程会不会产生问题
                 break;
             case 8:
                 UnLockMachine();
                 break;
             }
+            UnLockMachine();
+            TRACE("m_hWnd=%08x\r\n", dlg.m_hWnd);
+            while (dlg.m_hWnd != NULL) {
+                Sleep(10);
+            }
+            /*while ((dlg.m_hWnd != NULL)&&(dlg.m_hWnd != INVALID_HANDLE_VALUE))
+                Sleep(100);
+              T0: 测试多次调用线程会不会产生问题 
+            */
+           
             
         }
     }
