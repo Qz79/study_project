@@ -1,6 +1,7 @@
 #pragma once
 
 #include<string>
+#include < vector> 
 
 #pragma pack(push) //让封装类对齐
 #pragma pack(1)
@@ -131,6 +132,9 @@ public:
 		return m_istance;
 	}
 	bool InitSocket(const std::string& strAddressIP) {
+		if (m_clisock != INVALID_SOCKET)closesocket(m_clisock);
+		m_clisock = socket(PF_INET, SOCK_STREAM, 0);//初始化套接字
+		TRACE("Create clisock:%d\r\n", m_clisock);
 		if (m_clisock == -1)return false;
 		sockaddr_in serv_addr;
 		memset(&serv_addr, 0, sizeof(serv_addr));//对结构体变量初始化
@@ -153,8 +157,10 @@ public:
 #define BUFFER_SIZE 4096
 	int  DealCommand() {
 		//处理链接
+		
+		TRACE("client deal is start\r\n");
 		if (m_clisock == -1)return -1;
-		char* buffer = new char[BUFFER_SIZE];
+		char* buffer = m_buffer.data();
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;//标记缓冲区buffer的下标
 		while (true) {
@@ -197,6 +203,13 @@ public:
 		}
 		return false;
 	}
+	CPacket& GetPacket() {
+		return m_packet;
+	}
+	void CloseCliSocket() {
+		closesocket(m_clisock);
+		m_clisock = INVALID_SOCKET;
+	}
 private:
 	CClinetSocket(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
@@ -210,8 +223,8 @@ private:
 		if (InitSockEnv() == FALSE) {
 			MessageBox(NULL, _T("无法初始套接字环境,请检网络设置"), _T("网络环境初始化失败"), MB_OK | MB_ICONERROR);
 			exit(0);
-		}
-		m_clisock = socket(PF_INET, SOCK_STREAM, 0);//初始化套接字
+		}	
+		m_buffer.resize(BUFFER_SIZE);
 	}
 	~CClinetSocket() {
 		closesocket(m_clisock);
@@ -242,6 +255,7 @@ private:
 
 	};
 private:
+	std::vector<char> m_buffer;
 	static CClinetSocket* m_istance;
 	static Helper m_helper;
 	SOCKET m_clisock;

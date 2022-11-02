@@ -163,4 +163,11 @@ void CRemoteClientDlg::OnBnClickedBtnTest()
 	if (ret == false) {
 		AfxMessageBox("初始化失败！");
 	}
+	CPacket pack(100, NULL, 0);
+	 ret = pclient->Send(pack);
+	if (ret == false) {
+		TRACE("Client Test Send cmd is failed\r\n");
+	}
+	pclient->DealCommand();
+	TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
 }

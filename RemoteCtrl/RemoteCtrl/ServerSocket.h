@@ -146,7 +146,8 @@ public:
 		sockaddr_in cli_addr;
 		memset(&cli_addr, 0, sizeof(cli_addr));
 		int length = sizeof(cli_addr);
-		m_clisock = accept(m_clisock, (sockaddr*)&cli_addr, &length);
+		m_clisock = accept(m_servsock, (sockaddr*)&cli_addr, &length);
+		TRACE("sever->m_clisock:%d\r\n", m_clisock);
 		if (m_clisock == -1)return false;
 		return true;
 		//closesocket(cli_sock);//TODO:链接客户端的套接字什么时候释放？
@@ -154,6 +155,7 @@ public:
 #define BUFFER_SIZE 4096
 	int  DealCommand() {
 		//处理链接
+		TRACE("sever deal is start\r\n");
 		if (m_clisock == -1)return -1;
 		char* buffer = new char[BUFFER_SIZE];
 		memset(buffer, 0, BUFFER_SIZE);
@@ -163,6 +165,7 @@ public:
 			size_t len=recv(m_clisock, buffer+index, BUFFER_SIZE -index, 0);
 			if (len <= 0) {
 				return -1;
+				delete[] buffer;
 			}
 			index += len;
 			len = index;
@@ -172,8 +175,10 @@ public:
 				memmove(buffer, buffer + len, BUFFER_SIZE - len);
 				index -= len;
 				return m_packet.sCmd;
+				delete[] buffer;
 			}
 		}
+		delete[] buffer;
 		return -1;
 	}
 	bool Send(const char* pData, int nSize) {

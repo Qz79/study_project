@@ -341,6 +341,14 @@ int UnLockMachine() {
     CServerSocket::getInstance()->Send(pack);
     return 0;
 }
+int TestLink() {
+    CPacket pack(100, NULL, 0);
+    bool ret=CServerSocket::getInstance()->Send(pack);
+    if (ret == false) {
+        TRACE("Test Send cmd is failed\r\n");
+    }
+    return 0;
+}
 int ExcuteCommand(int nCmd) {
     int ret = 0;
     switch (nCmd) {
@@ -369,6 +377,9 @@ int ExcuteCommand(int nCmd) {
         break;
     case 8:
         ret = UnLockMachine();
+        break;
+    case 100:
+        ret = TestLink();
         break;
     }
     /*T1:测试解锁
@@ -419,7 +430,7 @@ int main()
                     count++;
                 }  
                 int ret = pserver->DealCommand();
-                if (ret == 0) {
+                if (ret > 0) {
                     ret = ExcuteCommand(pserver->GetPacket().sCmd);
                     if (ret != 0) {
                         TRACE("执行命令失败：%d,ret=%d\r\n", pserver->GetPacket().sCmd, ret);
