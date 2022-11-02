@@ -120,13 +120,13 @@ typedef struct MouseEvent {
 	WORD nButton;//左键、中建、右键
 	POINT pointXY;//坐标
 }MOUSEEV,*PMOUSEEV;
-class ServerSocket
+class CServerSocket
 {
 public:
-	static ServerSocket* getInstance() {
+	static CServerSocket* getInstance() {
 		//静态函数没有this指针，所以无法访问成员变量
 		if (m_istance == NULL) {
-			m_istance = new ServerSocket();
+			m_istance = new CServerSocket();
 		}
 		return m_istance;
 	}
@@ -198,16 +198,23 @@ public:
 		}
 		return false;
 	}
+	CPacket& GetPacket() {
+		return m_packet;
+	}
+	void CloseCliSocket() {
+		closesocket(m_clisock);
+		m_clisock = INVALID_SOCKET;
+	}
 private:
-	ServerSocket(const ServerSocket& ss){
+	CServerSocket(const CServerSocket& ss){
 		m_servsock = ss.m_servsock;
 		m_clisock = ss.m_clisock;
 	}
-	ServerSocket& operator=(const ServerSocket& ss){
+	CServerSocket& operator=(const CServerSocket& ss){
 		m_servsock = ss.m_servsock;
 		m_clisock = ss.m_clisock;
 	}
-	ServerSocket(){
+	CServerSocket(){
 		m_servsock = INVALID_SOCKET;
 		m_clisock = INVALID_SOCKET;
 		if (InitSockEnv() == FALSE) {
@@ -216,7 +223,7 @@ private:
 		}
 		m_servsock = socket(PF_INET, SOCK_STREAM, 0);//初始化套接字
 	}
-	~ServerSocket(){
+	~CServerSocket(){
 		closesocket(m_servsock);
 		WSACleanup();
 	}
@@ -229,7 +236,7 @@ private:
 	}
 	static void releaseInstance() {
 		if (m_istance != NULL) {
-			ServerSocket* temp = m_istance;
+			CServerSocket* temp = m_istance;
 			m_istance = NULL;
 			delete temp;
 		}
@@ -237,15 +244,15 @@ private:
 	class Helper {
 	public:
 		Helper(){
-			ServerSocket::getInstance();
+			CServerSocket::getInstance();
 		}
 		~Helper() {
-			ServerSocket::releaseInstance();
+			CServerSocket::releaseInstance();
 		}
 	
 	};
 private:
-	static ServerSocket* m_istance;
+	static CServerSocket* m_istance;
 	static Helper m_helper;
 	SOCKET m_servsock;
 	SOCKET m_clisock;

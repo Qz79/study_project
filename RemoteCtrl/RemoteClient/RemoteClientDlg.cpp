@@ -65,6 +65,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
 END_MESSAGE_MAP()
 
 
@@ -153,3 +154,13 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+
+void CRemoteClientDlg::OnBnClickedBtnTest()
+{
+	CClinetSocket* pclient = CClinetSocket::getInstance();
+	bool ret=pclient->InitSocket("127.0.0.1");
+	if (ret == false) {
+		AfxMessageBox("初始化失败！");
+	}
+}

@@ -71,7 +71,7 @@ typedef struct file_info {
 int  MakeDirectoryInfo() {
     std::string strPath;
     //std::list<FILEINFO> lstFileInfos;
-    if (ServerSocket::getInstance()->GetFilePath(strPath) == false) {
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
         OutputDebugString(_T("命令解析错误！"));
         return -1;
     }
@@ -84,7 +84,7 @@ int  MakeDirectoryInfo() {
         memcpy(finfo.FileName, strPath.c_str(), strPath.size());
         //lstFileInfos.push_back(finfo);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-        ServerSocket::getInstance()->Send(pack);
+        CServerSocket::getInstance()->Send(pack);
         OutputDebugString(_T("没有权限访问目录"));
         return -2;
     }
@@ -100,30 +100,30 @@ int  MakeDirectoryInfo() {
         memcpy(finfo.FileName,fdata.name,strlen(fdata.name));
         //lstFileInfos.push_back(finfo);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-        ServerSocket::getInstance()->Send(pack);
+        CServerSocket::getInstance()->Send(pack);
     } while (!_findnext(hfind, &fdata));
     FILEINFO finfo;
     finfo.HasNext = FALSE;
     _findclose(hfind);
     CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-    ServerSocket::getInstance()->Send(pack);
+    CServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int RunFile() {
     std::string strPath;
-    if (ServerSocket::getInstance()->GetFilePath(strPath) == false) {
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
         OutputDebugString(_T("命令解析错误！"));
         return -1;
     }
     ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
     CPacket pack(3, NULL,0);
-    ServerSocket::getInstance()->Send(pack);
+    CServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int DownFile() {
     std::string strPath;
     long long data = 0;
-    if (ServerSocket::getInstance()->GetFilePath(strPath) == false) {
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
         OutputDebugString(_T("命令解析错误！"));
         return -1;
     }
@@ -131,7 +131,7 @@ int DownFile() {
     errno_t err=fopen_s(&pFile,strPath.c_str(), "rb");
     if (err != 0) {
         CPacket pack(4,(BYTE*)&data, 8);
-        ServerSocket::getInstance()->Send(pack);
+        CServerSocket::getInstance()->Send(pack);
         return -2;
     }
     if (pFile != NULL) {
@@ -145,17 +145,17 @@ int DownFile() {
         do {
             rlen = fread(buffer, 1, 1024, pFile);
             CPacket pack(4, (BYTE*)buffer, sizeof(buffer));
-            ServerSocket::getInstance()->Send(pack);
+            CServerSocket::getInstance()->Send(pack);
         } while (rlen >= 1024);
         fclose(pFile);
     }    
     CPacket pack(4, NULL, 0);
-    ServerSocket::getInstance()->Send(pack); 
+    CServerSocket::getInstance()->Send(pack); 
     return 0;
 }
 int MoueEvent() {
     MOUSEEV mouse;
-    if (ServerSocket::getInstance()->MoueEvent(mouse)) {
+    if (CServerSocket::getInstance()->MoueEvent(mouse)) {
         
         int flags = 0;
         switch (mouse.nButton) {
@@ -235,7 +235,7 @@ int MoueEvent() {
             break;
         }
         CPacket pack(5, NULL, 0);
-        ServerSocket::getInstance()->Send(pack);
+        CServerSocket::getInstance()->Send(pack);
     }
     else {
         OutputDebugString(_T("鼠标命令获取失败！"));
@@ -263,7 +263,7 @@ int SendScreen() {
         PBYTE pData = (PBYTE)GlobalLock(hMem);   //获取数据
         SIZE_T nSize = GlobalSize(hMem);         //获取数据大小
         CPacket pack(6, pData, nSize);
-        ServerSocket::getInstance()->Send(pack);
+        CServerSocket::getInstance()->Send(pack);
         GlobalUnlock(hMem);
     }
    //screen.Save(_T("test2022.png"), Gdiplus::ImageFormatPNG);
@@ -328,7 +328,7 @@ int  LockMachine() {
         TRACE("threadid=%d\r\n", threadid);
     }
     CPacket pack(7, NULL, 0);
-    ServerSocket::getInstance()->Send(pack);
+    CServerSocket::getInstance()->Send(pack);
     return 0;
 }
 int UnLockMachine() {
@@ -338,8 +338,50 @@ int UnLockMachine() {
     //需要利用下面这个函数去发送消息
     PostThreadMessage(threadid, WM_KEYDOWN, 0x1B,0);
     CPacket pack(8, NULL, 0);
-    ServerSocket::getInstance()->Send(pack);
+    CServerSocket::getInstance()->Send(pack);
     return 0;
+}
+int ExcuteCommand(int nCmd) {
+    int ret = 0;
+    switch (nCmd) {
+    case 1:
+        ret = MakeDirverInfo();
+        break;
+    case 2:
+        ret = MakeDirectoryInfo();
+        break;
+    case 3:
+        ret = RunFile();
+        break;
+    case 4:
+        ret = DownFile();
+        break;
+    case 5:
+        ret = MoueEvent();
+        break;
+    case 6:
+        ret = SendScreen();
+        break;
+    case 7:
+        ret = LockMachine();
+        /*Sleep(50);
+        LockMachine();*///T0:测试多次调用线程会不会产生问题
+        break;
+    case 8:
+        ret = UnLockMachine();
+        break;
+    }
+    /*T1:测试解锁
+    UnLockMachine();
+    TRACE("m_hWnd=%08x\r\n", dlg.m_hWnd);
+    while (dlg.m_hWnd != NULL) {
+        Sleep(10);
+    }*/
+    /*while ((dlg.m_hWnd != NULL)&&(dlg.m_hWnd != INVALID_HANDLE_VALUE))
+        Sleep(100);
+      T0: 测试多次调用线程会不会产生问题
+    */
+    return ret;
 }
 int main()
 {
@@ -361,64 +403,30 @@ int main()
         //    // TODO: 在此处为应用程序的行为编写代码。
         //    // socket、bind、liten、accpet、read、write、close
         //    // 初始化环境，Windows下面有一个环境的初始化的，用到WSADATA
-        //    CServerSocket*pserver=CServerSocket::getInstance();
-        //    if (pserver->InitSocket() == false) {
-        //        MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
-        //        exit(0);
-        //    }
-        //    int count = 0;
-        //    while (CServerSocket::getInstance() != NULL) {
-        //        if (pserver->AcceptClient() == false) {
-        //            if (count >= 3) {
-        //                MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
-        //                exit(0);
-        //            }
-        //            MessageBox(NULL, _T("客户端连接异常,自动重试中"), _T("提示"), MB_OK | MB_ICONERROR);
-        //            count++;
-        //        }  
-        //        int ret = pserver->DealCommand();//TODO:
-        //    }
-          
-            int nCmd = 7;
-            switch (nCmd) {
-            case 1:
-                MakeDirverInfo();
-                break;
-            case 2:
-                MakeDirectoryInfo();
-                break;
-            case 3:
-                RunFile();
-                break;
-            case 4:
-                DownFile();
-                break;
-            case 5:
-                MoueEvent();
-                break;
-            case 6:
-                SendScreen();
-                break;
-            case 7:
-                LockMachine();
-                /*Sleep(50);
-                LockMachine();*///T0:测试多次调用线程会不会产生问题
-                break;
-            case 8:
-                UnLockMachine();
-                break;
+            CServerSocket*pserver=CServerSocket::getInstance();
+            if (pserver->InitSocket() == false) {
+                MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
+                exit(0);
             }
-            UnLockMachine();
-            TRACE("m_hWnd=%08x\r\n", dlg.m_hWnd);
-            while (dlg.m_hWnd != NULL) {
-                Sleep(10);
-            }
-            /*while ((dlg.m_hWnd != NULL)&&(dlg.m_hWnd != INVALID_HANDLE_VALUE))
-                Sleep(100);
-              T0: 测试多次调用线程会不会产生问题 
-            */
-           
-            
+            int count = 0;
+            while (CServerSocket::getInstance() != NULL) {
+                if (pserver->AcceptClient() == false) {
+                    if (count >= 3) {
+                        MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
+                        exit(0);
+                    }
+                    MessageBox(NULL, _T("客户端连接异常,自动重试中"), _T("提示"), MB_OK | MB_ICONERROR);
+                    count++;
+                }  
+                int ret = pserver->DealCommand();
+                if (ret == 0) {
+                    ret = ExcuteCommand(pserver->GetPacket().sCmd);
+                    if (ret != 0) {
+                        TRACE("执行命令失败：%d,ret=%d\r\n", pserver->GetPacket().sCmd, ret);
+                    }
+                    pserver->CloseCliSocket();
+                }
+            }           
         }
     }
     else

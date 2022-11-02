@@ -119,19 +119,7 @@ typedef struct MouseEvent {
 	WORD nButton;//×ó¼ü¡¢ÖÐ½¨¡¢ÓÒ¼ü
 	POINT pointXY;//×ø±ê
 }MOUSEEV, * PMOUSEEV;
-std::string GetErrorInfo(int wsaErrCode) {
-	std::string ret;
-	LPVOID lpMsgBuf = NULL;
-	FormatMessage(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL,
-		wsaErrCode,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPSTR)lpMsgBuf, 0, NULL);
-	ret = (char*)lpMsgBuf;
-	LocalFree(lpMsgBuf);
-	return ret;
-}
+std::string GetErrorInfo(int wsaErrCode);
 class CClinetSocket
 {
 public:
