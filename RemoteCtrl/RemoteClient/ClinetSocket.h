@@ -120,6 +120,18 @@ typedef struct MouseEvent {
 	WORD nButton;//×ó¼ü¡¢ÖÐ½¨¡¢ÓÒ¼ü
 	POINT pointXY;//×ø±ê
 }MOUSEEV, * PMOUSEEV;
+typedef struct file_info {
+	file_info() {
+		Isinvalid = FALSE;
+		IsDirectory = -1;
+		HasNext = TRUE;
+		memset(FileName, 0, sizeof(FileName));
+	}
+	BOOL Isinvalid;
+	BOOL IsDirectory;
+	BOOL HasNext;
+	char FileName[256];
+}FILEINFO, * PFILEINFO;
 std::string GetErrorInfo(int wsaErrCode);
 class CClinetSocket
 {

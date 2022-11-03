@@ -51,23 +51,12 @@ int MakeDirverInfo() {
     result += ',';
     CPacket packet(1, (BYTE*)result.c_str(), result.size());
     Dump((BYTE*)packet.Data(), packet.Size());
-    //CServerSocket::getInstance()->Send(packet);
+    CServerSocket::getInstance()->Send(packet);
     return 0;
 }
 #include<io.h>
 #include<list>
-typedef struct file_info {
-    file_info() {
-        Isinvalid = FALSE;
-        IsDirectory = -1;
-        HasNext = TRUE;
-        memset(FileName, 0, sizeof(FileName));
-    }
-    BOOL Isinvalid;
-    BOOL IsDirectory;
-    BOOL HasNext;
-    char FileName[256];
-}FILEINFO,*PFILEINFO;
+
 int  MakeDirectoryInfo() {
     std::string strPath;
     //std::list<FILEINFO> lstFileInfos;

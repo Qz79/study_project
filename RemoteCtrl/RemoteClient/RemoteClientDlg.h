@@ -17,9 +17,10 @@ public:
 	enum { IDD = IDD_REMOTECLIENT_DIALOG };
 #endif
 
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
-
+private:
+	int SendCmdPack(int nCmd, bool AutoClose=true, BYTE* pData=NULL, size_t nLength=0);
 
 // 实现
 protected:
@@ -35,4 +36,9 @@ public:
 	afx_msg void OnBnClickedBtnTest();
 	DWORD m_addr_server;
 	CString m_nPort;
+	afx_msg void OnBnClickedBtnFileinfo();
+	CTreeCtrl m_Tree;
+	afx_msg void OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
+public:
+	CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 };

@@ -63,6 +63,29 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_addr_server);
 	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
+	DDX_Control(pDX, IDC_TREE_DIR, m_Tree);
+}
+
+int CRemoteClientDlg::SendCmdPack(int nCmd, bool AutoClose,BYTE* pData, size_t nLength)
+{
+	UpdateData();
+	CClinetSocket* pclient = CClinetSocket::getInstance();
+	bool ret = pclient->InitSocket(m_addr_server, atoi(m_nPort));
+	if (ret == false) {
+		AfxMessageBox("初始化失败！");
+		return -1;
+	}
+	CPacket pack(nCmd, NULL, 0);
+	ret = pclient->Send(pack);
+	if (ret == false) {
+		TRACE("Client Test Send cmd is failed\r\n");
+		return -2;
+	}
+	int cmd=pclient->DealCommand();
+	TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
+	if (AutoClose)
+		pclient->CloseCliSocket();
+	return cmd;
 }
 
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
@@ -70,6 +93,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
+	ON_BN_CLICKED(IDC_BTN_FILEINFO, &CRemoteClientDlg::OnBnClickedBtnFileinfo)
+	ON_NOTIFY(NM_DBLCLK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMDblclkTreeDir)
 END_MESSAGE_MAP()
 
 
@@ -106,6 +131,13 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData();
+	/*UpdateData() 是MFC的窗口函数，用来刷新数据的。
+	总的来说：操作系统会调用这个函数来初始化对话框中的数据，或者检索或者验证对话框中的数据。
+	UpdateData(true);//用于将屏幕上控件中的数据交换到变量中。
+	UpdateData(false);//用于将数据在屏幕中对应控件中显示出来。
+	当你使用了ClassWizard建立了控件和变量之间的联系后：当你修改了变量的值，
+	而希望对话框控件更新显示，就应该在修改变量后调用UpdateData(FALSE)；
+	如果你希望知道用户在对话框中到底输入了什么，就应该在访问变量前调用UpdateData(TRUE)。*/
 	m_addr_server = 0x7F000001;
 	m_nPort = "9527";
 	UpdateData(FALSE);
@@ -165,17 +197,64 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
-	UpdateData();
+	int ret=SendCmdPack(100);
+	if (ret == -1 || ret == -2) {
+		AfxMessageBox("发送命令失败！");
+		return;
+	}
+}
+
+
+void CRemoteClientDlg::OnBnClickedBtnFileinfo()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	int ret = SendCmdPack(1);
+	if (ret == -1 || ret == -2) {
+		AfxMessageBox("发送命令失败！");
+		return;
+	}
 	CClinetSocket* pclient = CClinetSocket::getInstance();
-	bool ret=pclient->InitSocket(m_addr_server,atoi(m_nPort));
-	if (ret == false) {
-		AfxMessageBox("初始化失败！");
+	std::string drives = pclient->GetPacket().strData;
+	std::string dr;
+	m_Tree.DeleteAllItems();
+	for (size_t i = 0; i < drives.size(); i++) {
+		if (drives [i]== ',') {
+			dr += ":";
+			m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			dr.clear();
+			continue;
+		}
+		dr += drives[i];
 	}
-	CPacket pack(100, NULL, 0);
-	 ret = pclient->Send(pack);
-	if (ret == false) {
-		TRACE("Client Test Send cmd is failed\r\n");
+}
+CString CRemoteClientDlg::GetPath(HTREEITEM hTree) {
+	CString strRet, strTemp;
+	do {
+		strTemp = m_Tree.GetItemText(hTree);
+		strRet = strTemp + "//" + strRet;
+		hTree = m_Tree.GetParentItem(hTree);
+	} while (hTree != NULL);
+	return strRet;
+}
+
+void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	CPoint point;
+	GetCursorPos(&point);
+	ScreenToClient(&point);
+	HTREEITEM hTreeItem = m_Tree.HitTest(point, 0);
+	if (hTreeItem == NULL)
+		return;
+	CString strPath = GetPath(hTreeItem);
+	int cmd = SendCmdPack(2,false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	CClinetSocket* pclient = CClinetSocket::getInstance();
+	PFILEINFO pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
+	while (pfile->HasNext) {
+		int cmd = pclient->DealCommand();
+		TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
+		//TODO:处理收到的数据
 	}
-	pclient->DealCommand();
-	TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
+	pclient->CloseCliSocket();
 }
