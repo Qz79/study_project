@@ -131,7 +131,7 @@ public:
 		}
 		return m_istance;
 	}
-	bool InitSocket(const std::string& strAddressIP) {
+	bool InitSocket(int AddressIP,int nPort) {
 		if (m_clisock != INVALID_SOCKET)closesocket(m_clisock);
 		m_clisock = socket(PF_INET, SOCK_STREAM, 0);//初始化套接字
 		TRACE("Create clisock:%d\r\n", m_clisock);
@@ -139,8 +139,8 @@ public:
 		sockaddr_in serv_addr;
 		memset(&serv_addr, 0, sizeof(serv_addr));//对结构体变量初始化
 		serv_addr.sin_family = AF_INET;
-		serv_addr.sin_addr.s_addr = inet_addr(strAddressIP.c_str());
-		serv_addr.sin_port = htons(9527);
+		serv_addr.sin_addr.s_addr =htonl(AddressIP);
+		serv_addr.sin_port = htons(nPort);
 		int ret = connect(m_clisock, (sockaddr*)&serv_addr, sizeof(serv_addr));
 		if (serv_addr.sin_addr.s_addr == INVALID_SOCKET) {
 			AfxMessageBox("指定IP不存在");
@@ -216,7 +216,6 @@ private:
 	}
 	CClinetSocket& operator=(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
-	
 	}
 	CClinetSocket() {
 		m_clisock = INVALID_SOCKET;
