@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "framework.h"
 #include<string>
-
+void Dump(BYTE* pData, size_t nSize);
 #pragma pack(push) //ÈÃ·â×°Àà¶ÔÆë
 #pragma pack(1)
 class CPacket {
@@ -199,11 +199,13 @@ public:
 	}
 	bool Send(CPacket& pack) {
 		if (m_clisock == -1)return false;
+		Dump((BYTE*)pack.Data(), pack.Size());
 		return send(m_clisock, pack.Data(), pack.Size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd<=4)) {
 			strPath = m_packet.strData;
+			TRACE("GetStrPath=%s\r\n", m_packet.strData);
 			return true;
 		}
 		return false;

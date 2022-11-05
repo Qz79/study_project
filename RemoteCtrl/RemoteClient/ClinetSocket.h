@@ -199,6 +199,7 @@ public:
 	}
 	bool Send(CPacket& pack) {
 		if (m_clisock == -1)return false;
+		TRACE("Clinet send Data:%s\r\n", pack.strData);
 		return send(m_clisock, pack.Data(), pack.Size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath) {

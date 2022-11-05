@@ -65,21 +65,29 @@ int  MakeDirectoryInfo() {
         return -1;
     }
     if (_chdir(strPath.c_str()) != 0) {
+        if (errno == EINVAL) {
+            exit(0);
+        }
         //_chdir
         FILEINFO finfo;
-        finfo.Isinvalid = TRUE;
-        finfo.IsDirectory = TRUE;//Q：问题，这里为什么是true
-        finfo.HasNext = FALSE;
-        memcpy(finfo.FileName, strPath.c_str(), strPath.size());
+        //finfo.Isinvalid = TRUE;
+        //finfo.IsDirectory = TRUE;//Q：问题，这里为什么是true
+        //finfo.HasNext = FALSE;
+        //memcpy(finfo.FileName, strPath.c_str(), strPath.size());
         //lstFileInfos.push_back(finfo);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
         CServerSocket::getInstance()->Send(pack);
-        OutputDebugString(_T("没有权限访问目录"));
+        OutputDebugString(_T("没有权限访问目录\n"));
         return -2;
     }
     _finddata_t fdata;
     intptr_t hfind = 0;
     if ((hfind = _findfirst("*", &fdata)) == -1) {
+        FILEINFO finfo;
+        finfo.HasNext = FALSE;
+        _findclose(hfind);
+        CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+        CServerSocket::getInstance()->Send(pack);
         OutputDebugString(_T("没有找到任何文件"));
         return -3;
     }
@@ -88,6 +96,7 @@ int  MakeDirectoryInfo() {
         finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;
         memcpy(finfo.FileName,fdata.name,strlen(fdata.name));
         //lstFileInfos.push_back(finfo);
+        TRACE("%s\r\n", finfo.FileName);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
         CServerSocket::getInstance()->Send(pack);
     } while (!_findnext(hfind, &fdata));

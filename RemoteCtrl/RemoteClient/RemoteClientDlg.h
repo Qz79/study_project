@@ -39,6 +39,7 @@ public:
 	afx_msg void OnBnClickedBtnFileinfo();
 	CTreeCtrl m_Tree;
 	afx_msg void OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
-public:
-	CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
+private:
+	CString CRemoteClientDlg::GetPath(HTREEITEM hTree);
+	void DeleteTreeChildItem(HTREEITEM hTree);
 };

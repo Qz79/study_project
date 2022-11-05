@@ -75,7 +75,7 @@ int CRemoteClientDlg::SendCmdPack(int nCmd, bool AutoClose,BYTE* pData, size_t n
 		AfxMessageBox("初始化失败！");
 		return -1;
 	}
-	CPacket pack(nCmd, NULL, 0);
+	CPacket pack(nCmd, pData, nLength);
 	ret = pclient->Send(pack);
 	if (ret == false) {
 		TRACE("Client Test Send cmd is failed\r\n");
@@ -220,7 +220,8 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	for (size_t i = 0; i < drives.size(); i++) {
 		if (drives [i]== ',') {
 			dr += ":";
-			m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			HTREEITEM Temp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			m_Tree.InsertItem(NULL, Temp, TVI_LAST);
 			dr.clear();
 			continue;
 		}
@@ -237,24 +238,51 @@ CString CRemoteClientDlg::GetPath(HTREEITEM hTree) {
 	return strRet;
 }
 
+void CRemoteClientDlg::DeleteTreeChildItem(HTREEITEM hTree)
+{
+	HTREEITEM hSub = NULL;
+	do {
+		hSub = m_Tree.GetChildItem(hTree);
+		if (hSub != NULL)m_Tree.DeleteItem(hSub);
+	} while (hSub != NULL);
+}
+
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
 	CPoint point;
 	GetCursorPos(&point);
-	ScreenToClient(&point);
+	m_Tree.ScreenToClient(&point);//这里的转换点击坐标理解上还是存在误区
 	HTREEITEM hTreeItem = m_Tree.HitTest(point, 0);
 	if (hTreeItem == NULL)
 		return;
+	if (m_Tree.GetChildItem(hTreeItem) == NULL)
+		return;
+	DeleteTreeChildItem(hTreeItem);//防止多次双击产生多次添加
 	CString strPath = GetPath(hTreeItem);
 	int cmd = SendCmdPack(2,false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	CClinetSocket* pclient = CClinetSocket::getInstance();
 	PFILEINFO pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
 	while (pfile->HasNext) {
+		TRACE("[%s] isdir:%d\r\n", pfile->FileName, pfile->IsDirectory);
+		if (pfile->IsDirectory) {
+			if ((CString(pfile->FileName) == ".") || (CString(pfile->FileName) == "..")) {
+				cmd = pclient->DealCommand();
+				TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
+				if (cmd < 0)break;
+				pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
+				continue;
+			}
+		}
+		HTREEITEM Temp=m_Tree.InsertItem(pfile->FileName,hTreeItem,TVI_LAST);
+		if (pfile->IsDirectory) {
+			m_Tree.InsertItem(NULL, Temp, TVI_LAST);
+		}
 		int cmd = pclient->DealCommand();
 		TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
-		//TODO:处理收到的数据
+		if (cmd < 0)break;
+		pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
 	}
 	pclient->CloseCliSocket();
 }
