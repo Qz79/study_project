@@ -64,6 +64,7 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_addr_server);
 	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
 	DDX_Control(pDX, IDC_TREE_DIR, m_Tree);
+	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
 int CRemoteClientDlg::SendCmdPack(int nCmd, bool AutoClose,BYTE* pData, size_t nLength)
@@ -94,7 +95,9 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
 	ON_BN_CLICKED(IDC_BTN_FILEINFO, &CRemoteClientDlg::OnBnClickedBtnFileinfo)
-	ON_NOTIFY(NM_DBLCLK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMDblclkTreeDir)
+	//ON_NOTIFY(NM_DBLCLK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMDblclkTreeDir)
+	ON_NOTIFY(NM_CLICK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMClickTreeDir)
+	ON_NOTIFY(NM_RCLICK, IDC_LIST_FILE, &CRemoteClientDlg::OnNMRClickListFile)
 END_MESSAGE_MAP()
 
 
@@ -221,7 +224,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 		if (drives [i]== ',') {
 			dr += ":";
 			HTREEITEM Temp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-			m_Tree.InsertItem(NULL, Temp, TVI_LAST);
+			m_Tree.InsertItem("", Temp, TVI_LAST);
 			dr.clear();
 			continue;
 		}
@@ -247,21 +250,21 @@ void CRemoteClientDlg::DeleteTreeChildItem(HTREEITEM hTree)
 	} while (hSub != NULL);
 }
 
-void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+void CRemoteClientDlg::LoadFileInfo()
 {
-	// TODO: 在此添加控件通知处理程序代码
-	*pResult = 0;
-	CPoint point;
+	CPoint point,pTree;
 	GetCursorPos(&point);
 	m_Tree.ScreenToClient(&point);//这里的转换点击坐标理解上还是存在误区
-	HTREEITEM hTreeItem = m_Tree.HitTest(point, 0);
+	pTree = point;
+	HTREEITEM hTreeItem = m_Tree.HitTest(pTree, 0);
 	if (hTreeItem == NULL)
 		return;
 	if (m_Tree.GetChildItem(hTreeItem) == NULL)
 		return;
 	DeleteTreeChildItem(hTreeItem);//防止多次双击产生多次添加
+	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeItem);
-	int cmd = SendCmdPack(2,false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int cmd = SendCmdPack(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	CClinetSocket* pclient = CClinetSocket::getInstance();
 	PFILEINFO pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
 	while (pfile->HasNext) {
@@ -274,15 +277,63 @@ void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 				pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
 				continue;
 			}
+			HTREEITEM Temp = m_Tree.InsertItem(pfile->FileName, hTreeItem, TVI_LAST);
+			m_Tree.InsertItem("", Temp, TVI_LAST);
+			TRACE("m_Tree-Temp%s\r\n", pfile->FileName);
+			//continue;
 		}
-		HTREEITEM Temp=m_Tree.InsertItem(pfile->FileName,hTreeItem,TVI_LAST);
-		if (pfile->IsDirectory) {
-			m_Tree.InsertItem(NULL, Temp, TVI_LAST);
+		else {
+			m_List.InsertItem(0, pfile->FileName);
 		}
+		
 		int cmd = pclient->DealCommand();
 		TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
 		if (cmd < 0)break;
 		pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
 	}
 	pclient->CloseCliSocket();
+}
+
+void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// TODO: 在此添加控件通知处理程序代码
+	// Q：单击事件未响应hTreeItem 值为空，坐标转换后为负数？
+	/* Q：当双击事件取消时，依旧需要双击才会显示，
+	      响应了单击事件，文件信息也都传过来，但是图形化界面没有显示问题？*/
+	
+	// Q：当反复单击的时候，加载文件数量不一样，又是哪里的问题
+	
+	*pResult = 0;
+	LoadFileInfo();
+}
+
+//void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+//{
+//	// TODO: 在此添加控件通知处理程序代码
+//	*pResult = 0;
+//	LoadFileInfo();
+//}
+
+
+
+
+
+void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	CPoint pMouse,pList;
+	GetCursorPos(&pMouse);
+	pList = pMouse;
+	m_List.ScreenToClient(&pList);
+	int ListSelected = m_List.HitTest(pList);
+	if (ListSelected < 0)return;
+	CMenu menu;
+	menu.LoadMenu(IDR_MENU_RCLICK);
+	CMenu* pPopup = menu.GetSubMenu(0);
+	if (pPopup != NULL) {
+		pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pMouse.x, pMouse.y, this);
+	}
+
 }
