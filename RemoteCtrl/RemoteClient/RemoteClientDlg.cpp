@@ -267,6 +267,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	int cmd = SendCmdPack(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	CClinetSocket* pclient = CClinetSocket::getInstance();
 	PFILEINFO pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
+
 	while (pfile->HasNext) {
 		TRACE("[%s] isdir:%d\r\n", pfile->FileName, pfile->IsDirectory);
 		if (pfile->IsDirectory) {
@@ -279,8 +280,6 @@ void CRemoteClientDlg::LoadFileInfo()
 			}
 			HTREEITEM Temp = m_Tree.InsertItem(pfile->FileName, hTreeItem, TVI_LAST);
 			m_Tree.InsertItem("", Temp, TVI_LAST);
-			TRACE("m_Tree-Temp%s\r\n", pfile->FileName);
-			//continue;
 		}
 		else {
 			m_List.InsertItem(0, pfile->FileName);
@@ -297,22 +296,22 @@ void CRemoteClientDlg::LoadFileInfo()
 void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
-	// Q：单击事件未响应hTreeItem 值为空，坐标转换后为负数？
-	/* Q：当双击事件取消时，依旧需要双击才会显示，
-	      响应了单击事件，文件信息也都传过来，但是图形化界面没有显示问题？*/
-	
-	// Q：当反复单击的时候，加载文件数量不一样，又是哪里的问题
+	// Q1：单击事件未响应hTreeItem 值为空，坐标转换后为负数？
+	// Q3：当反复单击的时候，加载文件数量不一样，又是哪里的问题
 	
 	*pResult = 0;
 	LoadFileInfo();
+	/* Q2：当双击事件取消时，依旧需要双击才会显示，
+		  响应了单击事件，文件信息也都传过来，但是图形化界面没有显示问题？*/
+	//A2: 第二个问题解决，使用为本身属性就没设置单个展开
 }
 
-//void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
-//{
-//	// TODO: 在此添加控件通知处理程序代码
-//	*pResult = 0;
-//	LoadFileInfo();
-//}
+void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	LoadFileInfo();
+}
 
 
 
