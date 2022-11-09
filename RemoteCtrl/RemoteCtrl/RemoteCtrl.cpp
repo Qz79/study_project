@@ -137,6 +137,8 @@ int DownFile() {
         //_ftelli64 获取文件指针当前未知
         data = _ftelli64(pFile);
         CPacket head(4, (BYTE*)&data, 8);
+        //这里出现逻辑漏洞，之前未发现，直到做客户端对应功能才发觉
+        CServerSocket::getInstance()->Send(head);
         fseek(pFile, 0, SEEK_SET);
         char buffer[1024] = "";
         size_t rlen = 0;
