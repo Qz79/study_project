@@ -270,7 +270,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	int cmd = SendCmdPack(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	CClinetSocket* pclient = CClinetSocket::getInstance();
 	PFILEINFO pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
-
+	int count = 0;
 	while (pfile->HasNext) {
 		TRACE("[%s] isdir:%d\r\n", pfile->FileName, pfile->IsDirectory);
 		if (pfile->IsDirectory) {
@@ -292,7 +292,9 @@ void CRemoteClientDlg::LoadFileInfo()
 		TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
 		if (cmd < 0)break;
 		pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
+		count++;
 	}
+	TRACE("client recv file count:%d\r\n", count);
 	pclient->CloseCliSocket();
 }
 

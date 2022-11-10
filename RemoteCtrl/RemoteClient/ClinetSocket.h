@@ -168,25 +168,25 @@ public:
 	
 #define BUFFER_SIZE 4096
 	int  DealCommand() {
-		//处理链接
-		
+		/*
+		对于缓冲区的操作还是需要理清逻辑的，这里除了index标记以外，还有就是定义的缓冲区中数据的问题
+		*/	
 		TRACE("client deal is start\r\n");
 		if (m_clisock == -1)return -1;
 		char* buffer = m_buffer.data();
-		memset(buffer, 0, BUFFER_SIZE);
-		size_t index = 0;//标记缓冲区buffer的下标
+		//memset(buffer, 0, BUFFER_SIZE);这里将缓冲区重置为0，出现问题之一
+		static size_t index = 0;//标记缓冲区buffer的下标 由于读取未必是全部读取所以index也会重置为0，这是问题之二
 		while (true) {
 			//len 接收到数据的大小
 			size_t len = recv(m_clisock, buffer + index, BUFFER_SIZE - index, 0);
-			if (len <= 0) {
+			if ((len <= 0)&&(index==0)) {//当缓冲区依旧有数据，只有index剩余长度读取完毕才会全部去读，问题之三
 				return -1;
 			}
 			index += len;
 			len = index;
-			//TODO:处理命令
 			m_packet = CPacket((BYTE*)buffer, len);
 			if (len > 0) {
-				memmove(buffer, buffer + len, BUFFER_SIZE - len);
+				memmove(buffer, buffer + len, index - len);
 				index -= len;
 				return m_packet.sCmd;
 			}
@@ -237,6 +237,7 @@ private:
 			exit(0);
 		}	
 		m_buffer.resize(BUFFER_SIZE);
+		memset(m_buffer.data(), 0, BUFFER_SIZE);
 	}
 	~CClinetSocket() {
 		closesocket(m_clisock);

@@ -91,6 +91,7 @@ int  MakeDirectoryInfo() {
         OutputDebugString(_T("没有找到任何文件"));
         return -3;
     }
+    int count = 0;
     do {
         FILEINFO finfo;
         finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;
@@ -99,7 +100,9 @@ int  MakeDirectoryInfo() {
         TRACE("%s\r\n", finfo.FileName);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
         CServerSocket::getInstance()->Send(pack);
+        count++;
     } while (!_findnext(hfind, &fdata));
+    TRACE("server send file count:%d\r\n", count);
     FILEINFO finfo;
     finfo.HasNext = FALSE;
     _findclose(hfind);
