@@ -296,6 +296,29 @@ void CRemoteClientDlg::LoadFileInfo()
 	pclient->CloseCliSocket();
 }
 
+void CRemoteClientDlg::LoadFileCurrent()
+{
+	HTREEITEM hTreeItem = m_Tree.GetSelectedItem();
+	CString strPath = GetPath(hTreeItem);
+	m_List.DeleteAllItems();
+	int cmd = SendCmdPack(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	CClinetSocket* pclient = CClinetSocket::getInstance();
+	PFILEINFO pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
+	while (pfile->HasNext) {
+		TRACE("[%s] isdir:%d\r\n", pfile->FileName, pfile->IsDirectory);
+		if (!pfile->IsDirectory) {
+			m_List.InsertItem(0, pfile->FileName);
+		}
+
+		int cmd = pclient->DealCommand();
+		TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
+		if (cmd < 0)break;
+		pfile = (PFILEINFO)pclient->GetPacket().strData.c_str();
+	}
+	pclient->CloseCliSocket();
+	//TODO:大文件传输需要额外处理
+}
+
 void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -343,7 +366,17 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CRemoteClientDlg::OnRunFile()
 {
-	// TODO: 在此添加命令处理程序代码
+	int SelectedList = m_List.GetSelectionMark();
+	CString strPath = m_List.GetItemText(SelectedList, 0);
+	HTREEITEM hTreeSelect = m_Tree.GetSelectedItem();
+	strPath = GetPath(hTreeSelect) + strPath;
+	TRACE("OpenFile strPath:%s\r\n", strPath);
+	int ret = SendCmdPack(3, true, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+	if (ret < 0) {
+		AfxMessageBox(_T("发送命令失败！"));
+		TRACE("send three cmd failed:%d\r\n", ret);
+		return;
+	}
 }
 
 
@@ -398,5 +431,19 @@ void CRemoteClientDlg::OnDownFile()
 
 void CRemoteClientDlg::OnDeleteFile()
 {
-	// TODO: 在此添加命令处理程序代码
+	int SelectedList = m_List.GetSelectionMark();
+	CString strPath = m_List.GetItemText(SelectedList, 0);
+	HTREEITEM hTreeSelect = m_Tree.GetSelectedItem();
+	strPath = GetPath(hTreeSelect) + strPath;
+	TRACE("OpenFile strPath:%s\r\n", strPath);
+	CClinetSocket* pclient = CClinetSocket::getInstance();
+	int ret = SendCmdPack(9, true, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+	if (ret < 0) {
+		AfxMessageBox(_T("发送命令失败！"));
+		TRACE("send three cmd failed:%d\r\n", ret);
+		return;
+	}
+	/*if (pclient->GetPacket().sCmd == 9)
+		m_List.UpdateWindow();远程控制所以需要重新获取数据才才算刷新，光调用接口无用*/
+	LoadFileCurrent();
 }

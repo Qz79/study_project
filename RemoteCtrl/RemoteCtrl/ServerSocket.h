@@ -203,7 +203,7 @@ public:
 		return send(m_clisock, pack.Data(), pack.Size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath) {
-		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd<=4)) {
+		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd<=4)||(m_packet.sCmd==9)) {
 			strPath = m_packet.strData;
 			TRACE("GetStrPath=%s\r\n", m_packet.strData);
 			return true;

@@ -43,6 +43,7 @@ private:
 	CString CRemoteClientDlg::GetPath(HTREEITEM hTree);
 	void DeleteTreeChildItem(HTREEITEM hTree);
 	void LoadFileInfo();
+	void LoadFileCurrent();
 public:
 	afx_msg void OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
 	CListCtrl m_List;

@@ -341,6 +341,22 @@ int UnLockMachine() {
     CServerSocket::getInstance()->Send(pack);
     return 0;
 }
+int DeleteLocalFile() {
+    std::string strPath;
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
+        OutputDebugString(_T("命令解析错误！"));
+        return -1;
+    }
+    //当对文件操作的时候需要考虑编码的问题
+    TCHAR szPath[MAX_PATH] = _T("");
+    //mbstowcs(szPath, strPath.c_str(), strPath.size());容易乱码
+    MultiByteToWideChar(CP_ACP, 0, strPath.c_str(), strPath.size()
+        , szPath, sizeof(szPath) / sizeof(TCHAR));
+    DeleteFileA(strPath.c_str());
+    CPacket pack(9, NULL, 0);
+    CServerSocket::getInstance()->Send(pack);
+    return 0;
+}
 int TestLink() {
     CPacket pack(100, NULL, 0);
     bool ret=CServerSocket::getInstance()->Send(pack);
@@ -378,6 +394,8 @@ int ExcuteCommand(int nCmd) {
     case 8:
         ret = UnLockMachine();
         break;
+    case 9:
+        ret = DeleteLocalFile();
     case 100:
         ret = TestLink();
         break;
