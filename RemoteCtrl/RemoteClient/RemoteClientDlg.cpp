@@ -101,6 +101,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
 	ON_COMMAND(ID_DOWN_FILE, &CRemoteClientDlg::OnDownFile)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
+	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::SendPack)
 END_MESSAGE_MAP()
 
 
@@ -147,6 +148,8 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	m_addr_server = 0x7F000001;
 	m_nPort = "9527";
 	UpdateData(FALSE);
+	m_dlgStatus.Create(IDD_DLG_STATUS, this);
+	m_dlgStatus.ShowWindow(SW_HIDE);
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -321,6 +324,68 @@ void CRemoteClientDlg::LoadFileCurrent()
 	//TODO:大文件传输需要额外处理
 }
 
+void CRemoteClientDlg::threadEntryForDownFile(void* arg)
+{
+	//当起线程的时候就应该考虑，线程安全问题，参数能否发送到主线程上去
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadDownFile(); 
+	_endthread();
+}
+
+void CRemoteClientDlg::threadDownFile()
+{
+	int SelectedList = m_List.GetSelectionMark();
+	CString strPath = m_List.GetItemText(SelectedList, 0);
+	CFileDialog dlg(false, NULL, strPath,
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, this);
+	FILE* pfile = NULL;
+	if (dlg.DoModal() == IDOK) {
+		pfile = fopen(dlg.GetPathName(), "wb+");
+		if (pfile == NULL) {
+			AfxMessageBox(_T("本地没有权限保存文件或无法创建"));
+			m_dlgStatus.ShowWindow(SW_HIDE);
+			return;
+		}
+	}
+	HTREEITEM hTreeSelect = m_Tree.GetSelectedItem();
+	strPath = GetPath(hTreeSelect) + strPath;
+	TRACE("strPath:%s\r\n", strPath);
+	CClinetSocket* pclient = CClinetSocket::getInstance();
+	do {
+		//这里利用自定义消息机制去解决线程安全问题的参数发送问题
+		//int ret = SendCmdPack(4, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+		int ret = SendMessage(WM_SEND_PACKET, 4 << 1 | 0, (LPARAM)(LPCSTR)strPath);
+		if (ret < 0) {
+			AfxMessageBox(_T("发送命令失败！"));
+			TRACE("send four cmd failed:%d\r\n", ret);
+			break;
+		}
+
+		long long nLength = *(long long*)pclient->GetPacket().strData.c_str();
+		if (nLength == 0) {
+			AfxMessageBox(_T("文件长度为零或无法打开"));
+			break;
+		}
+		long long count = 0;
+		while (count < nLength) {
+			ret = pclient->DealCommand();
+			if (ret < 0) {
+				AfxMessageBox(_T("传输失败！"));
+				TRACE("DealCmd failed:%d\r\n", ret);
+				break;
+			}
+			fwrite(pclient->GetPacket().strData.c_str(), 1,
+				pclient->GetPacket().strData.size(), pfile);
+			count += pclient->GetPacket().strData.size();
+		}
+	} while (false);
+	fclose(pfile);
+	pclient->CloseCliSocket();
+	m_dlgStatus.ShowWindow(SW_HIDE);
+	EndWaitCursor();
+	MessageBox(_T("下载完成"), _T("完成"));
+}
+
 void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -384,50 +449,13 @@ void CRemoteClientDlg::OnRunFile()
 
 void CRemoteClientDlg::OnDownFile()
 {
-	int SelectedList = m_List.GetSelectionMark();
-	CString strPath = m_List.GetItemText(SelectedList,0);
-	CFileDialog dlg(false, NULL, strPath,
-		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, this);
-	FILE* pfile = NULL;
-	if (dlg.DoModal() == IDOK) {
-		pfile = fopen(dlg.GetPathName(), "wb+");
-		if (pfile == NULL) {
-			AfxMessageBox(_T("本地没有权限保存文件或无法创建"));
-			return;
-		}
-	}
-	HTREEITEM hTreeSelect = m_Tree.GetSelectedItem();
-	strPath = GetPath(hTreeSelect) + strPath;
-	TRACE("strPath:%s\r\n", strPath);
-	CClinetSocket* pclient = CClinetSocket::getInstance();
-	do{
-		int ret=SendCmdPack(4, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
-		if (ret < 0) {
-			AfxMessageBox(_T("发送命令失败！"));
-			TRACE("send four cmd failed:%d\r\n", ret);
-			break;
-		}
-		
-		long long nLength = *(long long*)pclient->GetPacket().strData.c_str();
-		if (nLength == 0) {
-			AfxMessageBox(_T("文件长度为零或无法打开"));
-			break;
-		}
-		long long count = 0;
-		while (count < nLength) {
-			ret=pclient->DealCommand();
-			if (ret < 0) {
-				AfxMessageBox(_T("传输失败！"));
-				TRACE("DealCmd failed:%d\r\n", ret);
-				break;
-			}
-			fwrite(pclient->GetPacket().strData.c_str(), 1, 
-				pclient->GetPacket().strData.size(),pfile);
-			count += pclient->GetPacket().strData.size();
-		}
-	} while (false);
-	fclose(pfile);
-	pclient->CloseCliSocket();
+	//开线程
+	_beginthread(CRemoteClientDlg::threadEntryForDownFile, 0, this);
+	BeginWaitCursor();
+	m_dlgStatus.ShowWindow(SW_SHOW);
+	m_dlgStatus.m_EditStatus.SetWindowText(_T("命令执行中......"));
+	m_dlgStatus.SetActiveWindow();
+	m_dlgStatus.CenterWindow();
 }
 
 
@@ -448,4 +476,12 @@ void CRemoteClientDlg::OnDeleteFile()
 	/*if (pclient->GetPacket().sCmd == 9)
 		m_List.UpdateWindow();远程控制所以需要重新获取数据才才算刷新，光调用接口无用*/
 	LoadFileCurrent();
+}
+
+LRESULT CRemoteClientDlg::SendPack(WPARAM wParam, LPARAM lParam)
+{
+	CString strPath = (LPCSTR)lParam;
+	//这里将cmd和bool的AutoClose两个参数合并，所以会利用到位运算，需要好好去体会
+	int ret = SendCmdPack(wParam>>1, wParam&1, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+	return ret;
 }

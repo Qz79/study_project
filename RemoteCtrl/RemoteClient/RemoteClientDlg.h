@@ -5,6 +5,9 @@
 #pragma once
 
 #include"ClinetSocket.h"
+#include"DlgStatus.h"
+
+#define WM_SEND_PACKET (WM_USER+1)
 // CRemoteClientDlg 对话框
 class CRemoteClientDlg : public CDialogEx
 {
@@ -25,7 +28,7 @@ private:
 // 实现
 protected:
 	HICON m_hIcon;
-
+	CDlgStatus m_dlgStatus;
 	// 生成的消息映射函数
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
@@ -44,6 +47,8 @@ private:
 	void DeleteTreeChildItem(HTREEITEM hTree);
 	void LoadFileInfo();
 	void LoadFileCurrent();
+	static void threadEntryForDownFile(void* arg);
+	void threadDownFile();
 public:
 	afx_msg void OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
 	CListCtrl m_List;
@@ -51,4 +56,5 @@ public:
 	afx_msg void OnRunFile();
 	afx_msg void OnDownFile();
 	afx_msg void OnDeleteFile();
+	afx_msg LRESULT SendPack(WPARAM wParam,LPARAM lParam);
 };
