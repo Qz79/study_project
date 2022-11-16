@@ -22,10 +22,24 @@ public:
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
+
+
 private:
 	int SendCmdPack(int nCmd, bool AutoClose=true, BYTE* pData=NULL, size_t nLength=0);
-
-// 实现
+public:
+	bool isFull()const {
+		return m_isFull;
+	}
+	CImage& GetImage() {
+		return m_image;
+	}
+	void SetImageStatus(bool isFull=false) {
+		m_isFull = isFull;
+	}
+private:
+	CImage m_image;
+	bool m_isFull;
+	// 实现
 protected:
 	HICON m_hIcon;
 	CDlgStatus m_dlgStatus;
@@ -49,6 +63,8 @@ private:
 	void LoadFileCurrent();
 	static void threadEntryForDownFile(void* arg);
 	void threadDownFile();
+	static void threadEntryForWatch(void* arg);//静态函数没有this指针
+	void threadWatch();
 public:
 	afx_msg void OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
 	CListCtrl m_List;
@@ -57,4 +73,6 @@ public:
 	afx_msg void OnDownFile();
 	afx_msg void OnDeleteFile();
 	afx_msg LRESULT SendPack(WPARAM wParam,LPARAM lParam);
+	afx_msg void OnBnClickedBtnWatch();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };

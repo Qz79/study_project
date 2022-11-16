@@ -31,6 +31,7 @@ public:
 		for (size_t j = 0; j < strData.size(); j++) {
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
+		TRACE("pack sSum:%d\r\n", sSum);
 	}
 	//BYTE = unsigned char ,size_t =unsigned int ;
 	//nSize 作为传入传出参数，传入时为data的长度，传出是用掉了多少
@@ -48,7 +49,7 @@ public:
 			nSize = 0;
 			return;
 		}
-		nLength = *(WORD*)(pData + i);
+		nLength = *(DWORD*)(pData + i);
 		i += 4;
 		if (nLength+i > nSize) {
 			nSize = 0;
@@ -93,9 +94,11 @@ public:
 		BYTE* pData = (BYTE*)strOut.c_str();
 		*(WORD*)pData = sHead; pData += 2;
 		*(DWORD*)pData = nLength; pData += 4;
+		TRACE("nLength:%d\r\n", nLength);
 		*(WORD*)pData = sCmd; pData += 2;
 		memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
 		*(WORD*)pData = sSum;
+		TRACE("sSum:%d\r\n", sSum);
 		return strOut.c_str();
 	}
 public:
@@ -164,7 +167,7 @@ public:
 		return true;
 		//closesocket(cli_sock);//TODO:链接客户端的套接字什么时候释放？
 	}
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 409600
 	int  DealCommand() {
 		//处理链接
 		TRACE("sever deal is start\r\n");
@@ -199,7 +202,7 @@ public:
 	}
 	bool Send(CPacket& pack) {
 		if (m_clisock == -1)return false;
-		Dump((BYTE*)pack.Data(), pack.Size());
+		//Dump((BYTE*)pack.Data(), pack.Size());
 		return send(m_clisock, pack.Data(), pack.Size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath) {

@@ -11,6 +11,7 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+#include "WatchDlg.h"
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -102,6 +103,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DOWN_FILE, &CRemoteClientDlg::OnDownFile)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::SendPack)
+	ON_BN_CLICKED(IDC_BTN_WATCH, &CRemoteClientDlg::OnBnClickedBtnWatch)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -386,6 +389,57 @@ void CRemoteClientDlg::threadDownFile()
 	MessageBox(_T("下载完成"), _T("完成"));
 }
 
+void CRemoteClientDlg::threadEntryForWatch(void* arg)
+{
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadWatch();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatch()
+{
+	Sleep(50);
+	CClinetSocket* pclient = NULL;
+	do {
+		pclient = CClinetSocket::getInstance();
+	} while (pclient == NULL);
+	//ULONGLONG tick = GetTickCount64();
+	for (;;) {
+		/*if ((GetTickCount64() - tick) < 100) {
+			Sleep(GetTickCount64() - tick);
+		}*/
+		if (m_isFull == false) {
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
+			if(ret==6){
+				BYTE* pData=(BYTE*)pclient->GetPacket().strData.c_str();
+				//TODO:存入CImage
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//申请内存
+				if (hMem == NULL) {
+					TRACE("内存不足了\r\n");
+					Sleep(1);
+					continue;
+				}
+				IStream* pStream = NULL;
+				HRESULT ret = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+				if (ret == S_OK) {
+					ULONG length = 0;
+					pStream->Write(pData, pclient->GetPacket().strData.size(), &length);
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					m_image.Load(pStream);
+					m_isFull = true;
+				}
+			}
+			else {
+			Sleep(1);
+		}
+	}
+		else {
+			Sleep(1);
+		}
+	}
+}
+
 void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -480,8 +534,42 @@ void CRemoteClientDlg::OnDeleteFile()
 
 LRESULT CRemoteClientDlg::SendPack(WPARAM wParam, LPARAM lParam)
 {
-	CString strPath = (LPCSTR)lParam;
+	
+	int ret = 0;
+	int cmd = wParam >> 1;
+	switch (cmd) {
+	case 4: 
+		{
+			CString strPath = (LPCSTR)lParam;
+			ret = SendCmdPack(cmd, wParam & 1, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+		}
+		break;
+	case 6: 
+		{
+			ret = SendCmdPack(cmd, wParam & 1);
+		}
+		break;
+	default:
+		ret = -1;
+	}	
 	//这里将cmd和bool的AutoClose两个参数合并，所以会利用到位运算，需要好好去体会
-	int ret = SendCmdPack(wParam>>1, wParam&1, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+	
 	return ret;
+}
+
+
+void CRemoteClientDlg::OnBnClickedBtnWatch()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CWatchDlg dlg(this);
+	_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);	
+	dlg.DoModal();
+}
+
+
+void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	CDialogEx::OnTimer(nIDEvent);
 }
