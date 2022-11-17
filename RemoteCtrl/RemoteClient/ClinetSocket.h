@@ -62,13 +62,13 @@ public:
 			i += nLength - 4;
 		}
 		sSum = *(WORD*)(pData + i);
-		TRACE("sSum:%d\r\n", sSum);
+		//TRACE("sSum:%d\r\n", sSum);
 		i += 2;
 		WORD sum = 0;
 		for (size_t j = 0; j < strData.size(); j++) {
 			sum += BYTE(strData[j]) & 0xFF;
 		}
-		TRACE("sum:%d\r\n",sum);
+		//TRACE("sum:%d\r\n",sum);
 		if (sum == sSum) {
 			nSize = i;
 			return;
@@ -180,7 +180,7 @@ public:
 		while (true) {
 			//len 接收到数据的大小
 			size_t len = recv(m_clisock, buffer + index, BUFFER_SIZE - index, 0);
-			TRACE("len:%d\r\n", len);
+			//TRACE("len:%d\r\n", len);
 			if ((len <= 0)&&(index<=0)) {//当缓冲区依旧有数据，只有index剩余长度读取完毕才会全部去读，问题之三
 				return -1;
 			}

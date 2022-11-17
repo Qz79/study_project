@@ -94,11 +94,11 @@ public:
 		BYTE* pData = (BYTE*)strOut.c_str();
 		*(WORD*)pData = sHead; pData += 2;
 		*(DWORD*)pData = nLength; pData += 4;
-		TRACE("nLength:%d\r\n", nLength);
+		//TRACE("nLength:%d\r\n", nLength);
 		*(WORD*)pData = sCmd; pData += 2;
 		memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
 		*(WORD*)pData = sSum;
-		TRACE("sSum:%d\r\n", sSum);
+		//TRACE("sSum:%d\r\n", sSum);
 		return strOut.c_str();
 	}
 public:

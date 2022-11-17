@@ -538,14 +538,15 @@ LRESULT CRemoteClientDlg::SendPack(WPARAM wParam, LPARAM lParam)
 	int ret = 0;
 	int cmd = wParam >> 1;
 	switch (cmd) {
-	case 4: 
-		{
+	case 4: {
 			CString strPath = (LPCSTR)lParam;
 			ret = SendCmdPack(cmd, wParam & 1, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
 		}
 		break;
-	case 6: 
-		{
+	case 5: {
+		ret = SendCmdPack(cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
+	}
+	case 6: {
 			ret = SendCmdPack(cmd, wParam & 1);
 		}
 		break;

@@ -266,7 +266,7 @@ int SendScreen() {
         PBYTE pData = (PBYTE)GlobalLock(hMem);   //获取数据
         SIZE_T nSize = GlobalSize(hMem);         //获取数据大小
         CPacket pack(6, pData, nSize);
-        TRACE("6:pack:%d\r\n", nSize);
+        //TRACE("6:pack:%d\r\n", nSize);
         CServerSocket::getInstance()->Send(pack);
         GlobalUnlock(hMem);
     }
