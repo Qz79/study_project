@@ -39,6 +39,7 @@ public:
 private:
 	CImage m_image;
 	bool m_isFull;
+	bool m_isClose;
 	// 实现
 protected:
 	HICON m_hIcon;
@@ -74,5 +75,5 @@ public:
 	afx_msg void OnDeleteFile();
 	afx_msg LRESULT SendPack(WPARAM wParam,LPARAM lParam);
 	afx_msg void OnBnClickedBtnWatch();
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	//afx_msg void OnTimer(UINT_PTR nIDEvent);
 };

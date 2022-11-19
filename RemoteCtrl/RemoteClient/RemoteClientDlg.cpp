@@ -104,7 +104,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::SendPack)
 	ON_BN_CLICKED(IDC_BTN_WATCH, &CRemoteClientDlg::OnBnClickedBtnWatch)
-	ON_WM_TIMER()
+	//ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -148,7 +148,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	当你使用了ClassWizard建立了控件和变量之间的联系后：当你修改了变量的值，
 	而希望对话框控件更新显示，就应该在修改变量后调用UpdateData(FALSE)；
 	如果你希望知道用户在对话框中到底输入了什么，就应该在访问变量前调用UpdateData(TRUE)。*/
-	m_addr_server = 0x7F000001;
+	m_addr_server = 0xC0A87387; //192.168.115.135
 	m_nPort = "9527";
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
@@ -404,7 +404,7 @@ void CRemoteClientDlg::threadWatch()
 		pclient = CClinetSocket::getInstance();
 	} while (pclient == NULL);
 	//ULONGLONG tick = GetTickCount64();
-	for (;;) {
+	while (!m_isClose) {
 		/*if ((GetTickCount64() - tick) < 100) {
 			Sleep(GetTickCount64() - tick);
 		}*/
@@ -426,6 +426,7 @@ void CRemoteClientDlg::threadWatch()
 					pStream->Write(pData, pclient->GetPacket().strData.size(), &length);
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					if ((HBITMAP)m_image != NULL)m_image.Destroy();
 					m_image.Load(pStream);
 					m_isFull = true;
 				}
@@ -550,6 +551,14 @@ LRESULT CRemoteClientDlg::SendPack(WPARAM wParam, LPARAM lParam)
 			ret = SendCmdPack(cmd, wParam & 1);
 		}
 		break;
+	case 7:{
+		ret = SendCmdPack(cmd, wParam & 1);
+	}
+		  break;
+	case 8: {
+		ret = SendCmdPack(cmd, wParam & 1);
+	}
+		  break;
 	default:
 		ret = -1;
 	}	
@@ -562,15 +571,18 @@ LRESULT CRemoteClientDlg::SendPack(WPARAM wParam, LPARAM lParam)
 void CRemoteClientDlg::OnBnClickedBtnWatch()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	m_isClose = false;
 	CWatchDlg dlg(this);
-	_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);	
+	HANDLE hThread =(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);	
 	dlg.DoModal();
+	m_isClose = true;
+	WaitForSingleObject(hThread, 500);
 }
 
 
-void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
-{
-	// TODO: 在此添加消息处理程序代码和/或调用默认值
-
-	CDialogEx::OnTimer(nIDEvent);
-}
+//void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
+//{
+//	// TODO: 在此添加消息处理程序代码和/或调用默认值
+//
+//	CDialogEx::OnTimer(nIDEvent);
+//}

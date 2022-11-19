@@ -253,7 +253,7 @@ int SendScreen() {
     int nWitdth = GetDeviceCaps(hScreen, HORZRES);
     int nHeight = GetDeviceCaps(hScreen, VERTRES);
     screen.Create(nWitdth, nHeight, nBitPerPixel);
-    BitBlt(screen.GetDC(), 0, 0, 1366, 748, hScreen, 0, 0, SRCCOPY);
+    BitBlt(screen.GetDC(), 0, 0, nWitdth, nHeight, hScreen, 0, 0, SRCCOPY);
     ReleaseDC(NULL, hScreen);
     HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//申请内存
     if (hMem == NULL)return -1;
@@ -299,8 +299,18 @@ unsigned __stdcall threadLockDlg(void* arg) {
     rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
     rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
     TRACE("right=%d bottom=%d\r\n", rect.right, rect.bottom);
-    double(rect.bottom *= 1.10);
+    double(rect.bottom *= 1.20);
     dlg.MoveWindow(rect);
+    CWnd* pText = dlg.GetDlgItem(IDC_STATIC_TALCK);
+    if (pText) {
+        CRect rtText;
+        pText->GetWindowRect(rtText);
+        int Width = rtText.Width();
+        int x = (rect.right - Width) / 2;
+        int nHeight = rtText.Height();
+        int y = (rect.bottom - rtText.Height()) / 2;
+        pText->MoveWindow(x, y, rtText.Width(), rtText.Height());
+    }
     dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
     ::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);
     rect.left = 0;
