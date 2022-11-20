@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XPD:PROJECT xmlns:XPD="http://www.staruml.com" version="1">
+<XPD:HEADER>
+<XPD:SUBUNITS>
+</XPD:SUBUNITS>
+<XPD:PROFILES>
+<XPD:PROFILE>UMLStandard</XPD:PROFILE>
+</XPD:PROFILES>
+</XPD:HEADER>
+<XPD:BODY>
+<XPD:OBJ name="DocumentElement" type="UMLProject" guid="PUHkVanMZ0mmedkf7531ZAAA">
+<XPD:ATTR name="Documentation" type="string">远程控制项目：
+1.服务端：
+功能：实现文件操作，屏幕操作，网络通信，鼠标操作。
+2.客户端：实现操作发送命令，控制服务端的对应功能。</XPD:ATTR>
+<XPD:ATTR name="Title" type="string">远程监控</XPD:ATTR>
+<XPD:ATTR name="Author" type="string">柒玖</XPD:ATTR>
+<XPD:ATTR name="Company" type="string">易道云</XPD:ATTR>
+<XPD:ATTR name="Copyright" type="string">无</XPD:ATTR>
+<XPD:ATTR name="#OwnedElements" type="integer">2</XPD:ATTR>
+<XPD:OBJ name="OwnedElements[0]" type="UMLPackage" guid="jKz11nOu/0Kt4ycBBvRtPQAA">
+<XPD:ATTR name="Name" type="string">RemteCtrl</XPD:ATTR>
+<XPD:REF name="Namespace">PUHkVanMZ0mmedkf7531ZAAA</XPD:REF>
+<XPD:ATTR name="#OwnedDiagrams" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedDiagrams[0]" type="UMLClassDiagram" guid="IUDP4AWTAUCBsmjMEHT+7wAA">
+<XPD:ATTR name="Name" type="string">RemoteCtrl Class</XPD:ATTR>
+<XPD:REF name="DiagramOwner">jKz11nOu/0Kt4ycBBvRtPQAA</XPD:REF>
+<XPD:OBJ name="DiagramView" type="UMLClassDiagramView" guid="v3mh3cT93U+yYTYwGVN5PAAA">
+<XPD:REF name="Diagram">IUDP4AWTAUCBsmjMEHT+7wAA</XPD:REF>
+<XPD:ATTR name="#OwnedViews" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedViews[0]" type="UMLClassView" guid="X+5N0Z2ldECZNUBoscZmyQAA">
+<XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
+<XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
+<XPD:ATTR name="Left" type="integer">99</XPD:ATTR>
+<XPD:ATTR name="Top" type="integer">31</XPD:ATTR>
+<XPD:ATTR name="Width" type="integer">80</XPD:ATTR>
+<XPD:ATTR name="Height" type="integer">43</XPD:ATTR>
+<XPD:REF name="Model">elkFRQy52kq94GiUy4p0jQAA</XPD:REF>
+<XPD:OBJ name="NameCompartment" type="UMLNameCompartmentView" guid="JBbNkOsXbUS80dMLJhMAwQAA">
+<XPD:OBJ name="NameLabel" type="LabelView" guid="owGEbbhbpkCfzvFT3AXCSAAA">
+<XPD:ATTR name="FontStyle" type="integer">1</XPD:ATTR>
+<XPD:ATTR name="Text" type="string">global</XPD:ATTR>
+</XPD:OBJ>
+<XPD:OBJ name="StereotypeLabel" type="LabelView" guid="jmwDg27+D0erwbz7upJcKwAA">
+<XPD:ATTR name="Visible" type="boolean">False</XPD:ATTR>
+</XPD:OBJ>
+<XPD:OBJ name="PropertyLabel" type="LabelView" guid="wa1Koi4hMUuUuT4mXJwn2gAA">
+<XPD:ATTR name="Visible" type="boolean">False</XPD:ATTR>
+</XPD:OBJ>
+</XPD:OBJ>
+<XPD:OBJ name="AttributeCompartment" type="UMLAttributeCompartmentView" guid="lFk7KR3cxUCnlFRFmGVpRAAA">
+<XPD:REF name="Model">elkFRQy52kq94GiUy4p0jQAA</XPD:REF>
+</XPD:OBJ>
+<XPD:OBJ name="OperationCompartment" type="UMLOperationCompartmentView" guid="AeBMKo53aESkgQ7Pbr4LjgAA">
+<XPD:REF name="Model">elkFRQy52kq94GiUy4p0jQAA</XPD:REF>
+</XPD:OBJ>
+<XPD:OBJ name="TemplateParameterCompartment" type="UMLTemplateParameterCompartmentView" guid="O6fV+FskjUi62TBizpZjDAAA">
+<XPD:ATTR name="Visible" type="boolean">False</XPD:ATTR>
+<XPD:REF name="Model">elkFRQy52kq94GiUy4p0jQAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+<XPD:ATTR name="#OwnedElements" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedElements[0]" type="UMLClass" guid="elkFRQy52kq94GiUy4p0jQAA">
+<XPD:ATTR name="Name" type="string">global</XPD:ATTR>
+<XPD:REF name="Namespace">jKz11nOu/0Kt4ycBBvRtPQAA</XPD:REF>
+<XPD:ATTR name="#Views" type="integer">4</XPD:ATTR>
+<XPD:REF name="Views[0]">X+5N0Z2ldECZNUBoscZmyQAA</XPD:REF>
+<XPD:REF name="Views[1]">lFk7KR3cxUCnlFRFmGVpRAAA</XPD:REF>
+<XPD:REF name="Views[2]">AeBMKo53aESkgQ7Pbr4LjgAA</XPD:REF>
+<XPD:REF name="Views[3]">O6fV+FskjUi62TBizpZjDAAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+<XPD:OBJ name="OwnedElements[1]" type="UMLPackage" guid="k5AcCDrYu0aTY/mN9JQbxQAA">
+<XPD:ATTR name="Name" type="string">RemoteClient</XPD:ATTR>
+<XPD:REF name="Namespace">PUHkVanMZ0mmedkf7531ZAAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:BODY>
+</XPD:PROJECT>
