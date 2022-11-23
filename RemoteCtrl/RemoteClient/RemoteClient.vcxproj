@@ -211,6 +211,7 @@
     <ResourceCompile Include="RemoteClient.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\远程监控.uml" />
     <None Include="res\RemoteClient.rc2" />
   </ItemGroup>
   <ItemGroup>

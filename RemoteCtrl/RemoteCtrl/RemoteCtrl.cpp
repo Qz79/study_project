@@ -7,6 +7,7 @@
 #include<direct.h>
 #include<atlimage.h>
 #include"CLockInFoDialg.h"
+#include"Tool.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -21,17 +22,7 @@
 CWinApp theApp;
 
 using namespace std;
-void Dump(BYTE* pData, size_t nSize) {
-    std::string strOut;
-    for (size_t i = 0; i < nSize; i++) {
-        char buf[8] = "";
-        if (i > 0 && (i % 16 == 0))strOut += "\n";
-        snprintf(buf, sizeof(buf), "%02X ", pData[i] & 0xFF);//&0xFF的操作是为了防止符号位产生负数
-        strOut += buf;
-    }
-    strOut += "\n";
-    OutputDebugStringA(strOut.c_str());
-}
+
 int MakeDirverInfo() {
     /*
     int _chdrive(int drive);
@@ -50,7 +41,7 @@ int MakeDirverInfo() {
     }
     result += ',';
     CPacket packet(1, (BYTE*)result.c_str(), result.size());
-    Dump((BYTE*)packet.Data(), packet.Size());
+    CTool::Dump((BYTE*)packet.Data(), packet.Size());
     CServerSocket::getInstance()->Send(packet);
     return 0;
 }
