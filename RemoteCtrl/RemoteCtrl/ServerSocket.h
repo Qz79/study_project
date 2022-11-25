@@ -3,7 +3,8 @@
 #include "framework.h"
 #include<string>
 #include"Packet.h"
-typedef void(*SOCKET_CALLBACK)(void*,int, std::list<CPacket>&, CPacket&);
+#include<list>
+typedef void(*SOCKET_CALLBACK)(void*,int,std::list<CPacket>&,CPacket&);
 class CServerSocket
 {
 public:
@@ -41,7 +42,7 @@ public:
 			}
 			int ret = DealCommand();
 			if (ret > 0) {
-				m_callback(m_arg, ret, lstPackets,m_packet);
+				m_callback(m_arg, ret, lstPackets, m_packet);
 				while (lstPackets.size() > 0) {
 					Send(lstPackets.front());
 					lstPackets.pop_front();
@@ -50,6 +51,7 @@ public:
 			CloseCliSocket();
 		}
 	}
+protected:
 	bool AcceptClient() {
 		sockaddr_in cli_addr;
 		memset(&cli_addr, 0, sizeof(cli_addr));

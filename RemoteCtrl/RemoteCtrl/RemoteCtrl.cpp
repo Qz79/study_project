@@ -88,30 +88,15 @@ int main()
         //    // socket、bind、liten、accpet、read、write、close
         //    // 初始化环境，Windows下面有一个环境的初始化的，用到WSADATA
             CCommand cmd;
-            CServerSocket*pserver=CServerSocket::getInstance();
-            if (pserver->InitSocket() == false) {
+            int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand,&cmd);
+            switch (ret) {
+            case -1:
                 MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
-                exit(0);
-            }
-            int count = 0;
-            while (CServerSocket::getInstance() != NULL) {
-                if (pserver->AcceptClient() == false) {
-                    if (count >= 3) {
-                        MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
-                        exit(0);
-                    }
-                    MessageBox(NULL, _T("客户端连接异常,自动重试中"), _T("提示"), MB_OK | MB_ICONERROR);
-                    count++;
-                }  
-                int ret = pserver->DealCommand();
-                if (ret > 0) {
-                    ret = cmd.ExcuteCommand(pserver->GetPacket().sCmd);
-                    if (ret != 0) {
-                        TRACE("执行命令失败：%d,ret=%d\r\n", pserver->GetPacket().sCmd, ret);
-                    }
-                    pserver->CloseCliSocket();
-                }
-            }           
+                break;
+            case -2:
+                MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
+                break;
+            }   
         }
     }
     else

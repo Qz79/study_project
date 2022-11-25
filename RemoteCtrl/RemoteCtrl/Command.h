@@ -14,15 +14,27 @@ class CCommand
 public:
 	CCommand();
 	~CCommand(){}
-	int ExcuteCommand(int nCmd);
+    int ExcuteCommand(int nCmd, std::list<CPacket>& lstPacket, CPacket& inPacket);
+    static void RunCommand(void* arg, int status, 
+        std::list<CPacket>& lstPacket, CPacket& inPacket) {
+        CCommand* thiz = (CCommand*)arg;
+        if (status > 0) {
+            int ret = thiz->ExcuteCommand(status, lstPacket, inPacket);
+            if (ret != 0) {
+                TRACE("执行命令失败：%d ret=%d\r\n", status, ret);
+            }
+        }
+        else {
+            MessageBox(NULL, _T("无法正常接入用户，自动重试"), _T("接入用户失败！"), MB_OK | MB_ICONERROR);
+        }
+    }
 protected:
     CLockInFoDialg m_dlg;
     unsigned m_threadid;
-private:
-	typedef int (CCommand::* FUNCCMD)();
-	std::map<int, FUNCCMD> m_mapFunc;
-private:
-    int MakeDirverInfo()
+	typedef int (CCommand::* FUNCCMD)(std::list<CPacket>&, CPacket& inPacket);//成员函数指针
+	std::map<int, FUNCCMD> m_mapFunc;//从命令号到功能的映射
+protected:
+    int MakeDirverInfo(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
         /*
         int _chdrive(int drive);
@@ -39,21 +51,16 @@ private:
                 result += 'A' + i - 1;
             }
         }
-        result += ',';
-        CPacket packet(1, (BYTE*)result.c_str(), result.size());
-        CTool::Dump((BYTE*)packet.Data(), packet.Size());
-        CServerSocket::getInstance()->Send(packet);
+        result += ',';      
+        //CTool::Dump((BYTE*)packet.Data(), packet.Size());
+        lstPacket.push_back(CPacket(1, (BYTE*)result.c_str(), result.size()));
         return 0;
     }
 
-    int MakeDirectoryInfo()
+    int MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
-        std::string strPath;
+        std::string strPath = inPacket.strData;
         //std::list<FILEINFO> lstFileInfos;
-        if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
-            OutputDebugString(_T("命令解析错误！"));
-            return -1;
-        }
         if (_chdir(strPath.c_str()) != 0) {
             if (errno == EINVAL) {
                 exit(0);
@@ -65,8 +72,7 @@ private:
             //finfo.HasNext = FALSE;
             //memcpy(finfo.FileName, strPath.c_str(), strPath.size());
             //lstFileInfos.push_back(finfo);
-            CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-            CServerSocket::getInstance()->Send(pack);
+            lstPacket.push_back(CPacket (2, (BYTE*)&finfo, sizeof(finfo)));
             OutputDebugString(_T("没有权限访问目录\n"));
             return -2;
         }
@@ -76,8 +82,7 @@ private:
             FILEINFO finfo;
             finfo.HasNext = FALSE;
             _findclose(hfind);
-            CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-            CServerSocket::getInstance()->Send(pack);
+            lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
             OutputDebugString(_T("没有找到任何文件"));
             return -3;
         }
@@ -88,162 +93,144 @@ private:
             memcpy(finfo.FileName, fdata.name, strlen(fdata.name));
             //lstFileInfos.push_back(finfo);
             TRACE("%s\r\n", finfo.FileName);
-            CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-            CServerSocket::getInstance()->Send(pack);
+            lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
             count++;
         } while (!_findnext(hfind, &fdata));
         TRACE("server send file count:%d\r\n", count);
         FILEINFO finfo;
         finfo.HasNext = FALSE;
         _findclose(hfind);
-        CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-        CServerSocket::getInstance()->Send(pack);
+        lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
         return 0;
     }
 
-    int RunFile()
+    int RunFile(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
-        std::string strPath;
-        if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
-            OutputDebugString(_T("命令解析错误！"));
-            return -1;
-        }
+        std::string strPath = inPacket.strData;
         ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-        CPacket pack(3, NULL, 0);
-        CServerSocket::getInstance()->Send(pack);
+        lstPacket.push_back(CPacket(3, NULL, 0));
         return 0;
     }
 
-    int DownFile()
+    int DownFile(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
-        std::string strPath;
+        std::string strPath = inPacket.strData;
         long long data = 0;
-        if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
-            OutputDebugString(_T("命令解析错误！"));
-            return -1;
-        }
         FILE* pFile = NULL;
         errno_t err = fopen_s(&pFile, strPath.c_str(), "rb");
         if (err != 0) {
-            CPacket pack(4, (BYTE*)&data, 8);
-            CServerSocket::getInstance()->Send(pack);
+            lstPacket.push_back(CPacket(4, (BYTE*)&data, 8));
             return -2;
         }
         if (pFile != NULL) {
             fseek(pFile, 0, SEEK_END);
             //_ftelli64 获取文件指针当前未知
             data = _ftelli64(pFile);
-            CPacket head(4, (BYTE*)&data, 8);
+            lstPacket.push_back(CPacket(4, (BYTE*)&data, 8));
             //这里出现逻辑漏洞，之前未发现，直到做客户端对应功能才发觉
-            CServerSocket::getInstance()->Send(head);
             fseek(pFile, 0, SEEK_SET);
             char buffer[1024] = "";
             size_t rlen = 0;
             do {
                 rlen = fread(buffer, 1, 1024, pFile);
-                CPacket pack(4, (BYTE*)buffer, sizeof(buffer));
-                CServerSocket::getInstance()->Send(pack);
+                lstPacket.push_back(CPacket(4, (BYTE*)buffer, sizeof(buffer)));
             } while (rlen >= 1024);
             fclose(pFile);
         }
-        CPacket pack(4, NULL, 0);
-        CServerSocket::getInstance()->Send(pack);
+        lstPacket.push_back(CPacket(4, NULL, 0));
         return 0;
     }
 
-    int MoueEvent()
+    int MoueEvent(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
         MOUSEEV mouse;
-        if (CServerSocket::getInstance()->MoueEvent(mouse)) {
+        memcpy(&mouse, inPacket.strData.c_str(), sizeof(MOUSEEV));
+        int flags = 0;
+        switch (mouse.nButton) {
+        case 0://左键
+            flags = 1;
+            break;
+        case 1://右键
+            flags = 2;
+            break;
+        case 2://中建
+            flags = 4;
+            break;
+        case 4://没有按键
+            flags = 8;
+            break;
+        }
+        if (flags != 8)SetCursorPos(mouse.pointXY.x, mouse.pointXY.y);
+        switch (mouse.nAction) {
+        case 0://单击
+            flags |= 0x10;
+            break;
+        case 1://双击
+            flags |= 0x20;
+            break;
+        case 2://按下
+            flags |= 0x40;
+            break;
+        case 3://放开
+            flags |= 0x80;
+            break;
+        default:
+            break;
+        }
+        switch (flags) {
+        case 0x21://左键双击
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+        case 0x11:// 左键单击
+            //mouse_event()模拟鼠标操作的API，GetMessageExtraInfo()获取键盘鼠标的额外信息
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x41://左键按下
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x81:// 左键放开
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x22://右键双击
+            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+        case 0x12:// 右键单击
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x42://右键按下
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x82:// 右键放开
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x24: // 中键双击
+            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+        case 0x14:// 中键单击
+            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x44: // 中键按下
+            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x84: //  中键放开
+            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+            break;
+        case 0x08: //单纯的移动
+            mouse_event(MOUSEEVENTF_MOVE, mouse.pointXY.x, mouse.pointXY.y, 0, GetMessageExtraInfo());
+            break;
+        }
+        lstPacket.push_back(CPacket(5, NULL, 0));
+  
+        OutputDebugString(_T("鼠标命令获取失败！"));
+        return -1;
 
-            int flags = 0;
-            switch (mouse.nButton) {
-            case 0://左键
-                flags = 1;
-                break;
-            case 1://右键
-                flags = 2;
-                break;
-            case 2://中建
-                flags = 4;
-                break;
-            case 4://没有按键
-                flags = 8;
-                break;
-            }
-            if (flags != 8)SetCursorPos(mouse.pointXY.x, mouse.pointXY.y);
-            switch (mouse.nAction) {
-            case 0://单击
-                flags |= 0x10;
-                break;
-            case 1://双击
-                flags |= 0x20;
-                break;
-            case 2://按下
-                flags |= 0x40;
-                break;
-            case 3://放开
-                flags |= 0x80;
-                break;
-            default:
-                break;
-            }
-            switch (flags) {
-            case 0x21://左键双击
-                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
-                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
-            case 0x11:// 左键单击
-                //mouse_event()模拟鼠标操作的API，GetMessageExtraInfo()获取键盘鼠标的额外信息
-                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
-                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x41://左键按下
-                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x81:// 左键放开
-                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x22://右键双击
-                mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
-                mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
-            case 0x12:// 右键单击
-                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
-                mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x42://右键按下
-                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x82:// 右键放开
-                mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x24: // 中键双击
-                mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
-                mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
-            case 0x14:// 中键单击
-                mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
-                mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x44: // 中键按下
-                mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x84: //  中键放开
-                mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
-                break;
-            case 0x08: //单纯的移动
-                mouse_event(MOUSEEVENTF_MOVE, mouse.pointXY.x, mouse.pointXY.y, 0, GetMessageExtraInfo());
-                break;
-            }
-            CPacket pack(5, NULL, 0);
-            CServerSocket::getInstance()->Send(pack);
-        }
-        else {
-            OutputDebugString(_T("鼠标命令获取失败！"));
-            return -1;
-        }
         return 0;
     }
 
-    int SendScreen()
+    int SendScreen(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
         CImage screen; //CImage 位图类
         HDC hScreen = ::GetDC(NULL);
@@ -262,10 +249,8 @@ private:
             LARGE_INTEGER bg = { 0 };
             pStream->Seek(bg, STREAM_SEEK_SET, NULL);//重置指针到开头，才可读取完成数据
             PBYTE pData = (PBYTE)GlobalLock(hMem);   //获取数据
-            SIZE_T nSize = GlobalSize(hMem);         //获取数据大小
-            CPacket pack(6, pData, nSize);
-            //TRACE("6:pack:%d\r\n", nSize);
-            CServerSocket::getInstance()->Send(pack);
+            SIZE_T nSize = GlobalSize(hMem);  
+            lstPacket.push_back(CPacket(6, pData, nSize));//获取数据大小
             GlobalUnlock(hMem);
         }
         //screen.Save(_T("test2022.png"), Gdiplus::ImageFormatPNG);
@@ -303,7 +288,7 @@ private:
         rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
         rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
         TRACE("right=%d bottom=%d\r\n", rect.right, rect.bottom);
-        double(rect.bottom *= 1.20);
+        rect.bottom *= 1.20;
         m_dlg.MoveWindow(rect);
         CWnd* pText = m_dlg.GetDlgItem(IDC_STATIC_TALCK);
         if (pText) {
@@ -338,52 +323,41 @@ private:
         m_dlg.DestroyWindow();
     }
 
-    int LockMachine()
+    int LockMachine(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
         if ((m_dlg.m_hWnd == NULL) || (m_dlg.m_hWnd == INVALID_HANDLE_VALUE)) {
             //_beginthread(threadLockDlg, 0, NULL);
             _beginthreadex(NULL, 0, threadLockDlg, NULL, 0, &m_threadid);
             TRACE("threadid=%d\r\n", m_threadid);
-        }
-        CPacket pack(7, NULL, 0);
-        CServerSocket::getInstance()->Send(pack);
+        }      
+        lstPacket.push_back(CPacket(7, NULL, 0));
         return 0;
     }
-    int UnLockMachine()
+    int UnLockMachine(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
         //dlg.SendMessage(WM_KEYDOWN, 0x1b, 0x00010001);
         //::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x1b, 0x00010001);
         //上面两个函数发送消息无效的原因是，windows消息机制，取消息的消息泵是依赖于当前线程的，所以无效
         //需要利用下面这个函数去发送消息
         PostThreadMessage(m_threadid, WM_KEYDOWN, 0x1B, 0);
-        CPacket pack(8, NULL, 0);
-        CServerSocket::getInstance()->Send(pack);
+        lstPacket.push_back(CPacket(8, NULL, 0));
         return 0;
     }
 
-    int DeleteLocalFile() {
-        std::string strPath;
-        if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
-            OutputDebugString(_T("命令解析错误！"));
-            return -1;
-        }
+    int DeleteLocalFile(std::list<CPacket>& lstPacket, CPacket& inPacket) {
+        std::string strPath= inPacket.strData;
         //当对文件操作的时候需要考虑编码的问题
         TCHAR szPath[MAX_PATH] = _T("");
         //mbstowcs(szPath, strPath.c_str(), strPath.size());容易乱码
         MultiByteToWideChar(CP_ACP, 0, strPath.c_str(), strPath.size()
             , szPath, sizeof(szPath) / sizeof(TCHAR));
         DeleteFileA(strPath.c_str());
-        CPacket pack(9, NULL, 0);
-        CServerSocket::getInstance()->Send(pack);
+        lstPacket.push_back(CPacket(9, NULL, 0));
         return 0;
     }
-    int TestLink()
+    int TestLink(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
-        CPacket pack(100, NULL, 0);
-        bool ret = CServerSocket::getInstance()->Send(pack);
-        if (ret == false) {
-            TRACE("Test Send cmd is failed\r\n");
-        }
+       lstPacket.push_back(CPacket(9, NULL, 0));
         return 0;
     }
 };

@@ -24,11 +24,11 @@ CCommand::CCommand():m_threadid(0){
 		m_mapFunc.insert(std::pair<int, FUNCCMD>(data[i].nCmd, data[i].func));
 	}
 }
-int CCommand::ExcuteCommand(int nCmd)
+int CCommand::ExcuteCommand(int nCmd, std::list<CPacket>& lstPacket, CPacket& inPacket)
 {
 	std::map<int, FUNCCMD>::iterator it = m_mapFunc.find(nCmd);
 	if (it == m_mapFunc.end()) {
 		return -1;
 	}
-	return (this->*it->second)();
+	return (this->*it->second)(lstPacket, inPacket);
 }
