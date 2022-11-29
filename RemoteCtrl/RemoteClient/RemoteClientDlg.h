@@ -8,6 +8,7 @@
 #include"DlgStatus.h"
 
 #define WM_SEND_PACKET (WM_USER+1)
+
 // CRemoteClientDlg 对话框
 class CRemoteClientDlg : public CDialogEx
 {

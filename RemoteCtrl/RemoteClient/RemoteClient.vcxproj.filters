@@ -79,6 +79,7 @@
       <Filter>资源文件</Filter>
     </None>
     <None Include="..\远程监控.uml" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\RemoteClient.ico">

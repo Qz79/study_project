@@ -214,6 +214,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\远程监控.uml" />
+    <None Include="cpp.hint" />
     <None Include="res\RemoteClient.rc2" />
   </ItemGroup>
   <ItemGroup>
