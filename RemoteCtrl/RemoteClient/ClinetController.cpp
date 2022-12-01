@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "ClinetController.h"
 CClientController* CClientController::m_instance = NULL;
-
+std::map<UINT, CClientController::MSGFUNC> CClientController::m_mapMsgFunc;
 CClientController* CClientController::getInstance()
 {
 	if (m_instance == NULL) {
@@ -81,7 +81,7 @@ LRESULT CClientController::OnSendWatch(UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	return m_WatchDlg.DoModal();
 }
-
+//对此函数还是存在疑惑
 LRESULT CClientController::OSendMessage(MSG msg)
 {
 	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
