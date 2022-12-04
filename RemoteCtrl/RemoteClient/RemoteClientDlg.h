@@ -3,9 +3,8 @@
 //
 
 #pragma once
-
-#include"ClinetSocket.h"
-#include"DlgStatus.h"
+#include "ClinetSocket.h"
+#include "DlgStatus.h"
 
 #define WM_SEND_PACKET (WM_USER+1)
 
@@ -24,9 +23,6 @@ public:
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
 
-
-private:
-	int SendCmdPack(int nCmd, bool AutoClose=true, BYTE* pData=NULL, size_t nLength=0);
 public:
 	bool isFull()const {
 		return m_isFull;
@@ -77,4 +73,6 @@ public:
 	afx_msg LRESULT SendPack(WPARAM wParam,LPARAM lParam);
 	afx_msg void OnBnClickedBtnWatch();
 	//afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnEnChangeEditPort();
 };

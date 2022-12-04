@@ -90,7 +90,7 @@ public:
 		//求包的长度
 		return nLength + 6;
 	}
-	const char* Data() {
+	const char* Data(std::string strOut)const {
 		strOut.resize(nLength + 6);
 		BYTE* pData = (BYTE*)strOut.c_str();
 		*(WORD*)pData = sHead; pData += 2;
@@ -107,8 +107,8 @@ public:
 	WORD sCmd;        //控制命令
 	std::string strData; // 包数据 
 	WORD sSum;           // 和校验 除了包头和长度以外的数据加起来
-	std::string strOut;  /*由于strData也是一个对象，所以在输出数据的时候是地址，
-						 所以需要在类中声明一个自己缓冲区，去存储整个包的数据*/
+	//std::string strOut;  //被弃用，由于需要从控制层过桥发送给视图层，
+	//所以不可以改变包对象，只能使用包数据
 };
 #pragma pack(pop)
 typedef struct MouseEvent {
@@ -145,7 +145,7 @@ public:
 		}
 		return m_istance;
 	}
-	bool InitSocket(int AddressIP,int nPort) {
+	bool InitSocket() {
 		if (m_clisock != INVALID_SOCKET)closesocket(m_clisock);
 		m_clisock = socket(PF_INET, SOCK_STREAM, 0);//初始化套接字
 		TRACE("Create clisock:%d\r\n", m_clisock);
@@ -153,8 +153,8 @@ public:
 		sockaddr_in serv_addr;
 		memset(&serv_addr, 0, sizeof(serv_addr));//对结构体变量初始化
 		serv_addr.sin_family = AF_INET;
-		serv_addr.sin_addr.s_addr =htonl(AddressIP);
-		serv_addr.sin_port = htons(nPort);
+		serv_addr.sin_addr.s_addr =htonl(m_nIP);
+		serv_addr.sin_port = htons(m_nPort);
 		int ret = connect(m_clisock, (sockaddr*)&serv_addr, sizeof(serv_addr));
 		if (serv_addr.sin_addr.s_addr == INVALID_SOCKET) {
 			AfxMessageBox("指定IP不存在");
@@ -167,7 +167,10 @@ public:
 		}
 		return true;
 	}
-	
+	void UpdateAddr(int nIP, int nPort) {
+		m_nIP = nIP;
+		m_nPort = nPort;
+	}
 #define BUFFER_SIZE 4096000
 	int  DealCommand() {
 		/*
@@ -199,10 +202,12 @@ public:
 		if (m_clisock == -1)return false;
 		return send(m_clisock, pData, nSize, 0) > 0;
 	}
-	bool Send(CPacket& pack) {
+	bool Send(const CPacket& pack) {
 		if (m_clisock == -1)return false;
+		std::string strOut;
+		pack.Data(strOut);
 		TRACE("Clinet send Data:%s\r\n", pack.strData);
-		return send(m_clisock, pack.Data(), pack.Size(), 0) > 0;
+		return send(m_clisock, strOut.c_str(), strOut.size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {
@@ -228,11 +233,15 @@ public:
 private:
 	CClinetSocket(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
+		m_nIP = ss.m_nIP;
+		m_nPort = ss.m_nPort;
 	}
 	CClinetSocket& operator=(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
+		m_nIP = ss.m_nIP;
+		m_nPort = ss.m_nPort;
 	}
-	CClinetSocket() {
+	CClinetSocket():m_nIP(INADDR_ANY),m_nPort(0) {
 		m_clisock = INVALID_SOCKET;
 		if (InitSockEnv() == FALSE) {
 			MessageBox(NULL, _T("无法初始套接字环境,请检网络设置"), _T("网络环境初始化失败"), MB_OK | MB_ICONERROR);
@@ -275,5 +284,7 @@ private:
 	static Helper m_helper;
 	SOCKET m_clisock;
 	CPacket m_packet;
+	int m_nIP;
+	int m_nPort;
 };
 

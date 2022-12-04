@@ -1,9 +1,12 @@
 #pragma once
-#include"resource.h"
-#include"RemoteClientDlg.h"
-#include"WatchDlg.h"
-#include"DlgStatus.h"
-#include<map>
+#include "ClinetSocket.h"
+#include "WatchDlg.h"
+#include "RemoteClientDlg.h"
+#include "DlgStatus.h"
+#include <map>
+#include "resource.h"
+#include "Tool.h"
+
 //#define WM_SEND_PACK (WM_USER+2)
 //#define WM_SEND_DATA (WM_USER+3)
 #define WM_SEND_STATUS (WM_USER+2)
@@ -15,6 +18,46 @@ public:
 	static CClientController* getInstance();
 	int Invoke(CWnd* pMainWnd);
 	int InitController();
+	void UpdateAddr(int nIP, int nPort) {
+		CClinetSocket::getInstance()->UpdateAddr(nIP, nPort);
+	}
+	int InitSocket() {
+		CClinetSocket* pclient = CClinetSocket::getInstance();
+		return  pclient->InitSocket();
+	}
+	int SendPack(const CPacket& pack) {
+		CClinetSocket* pclient = CClinetSocket::getInstance();
+		return pclient->Send(pack);
+	}
+	int DealCommand() {
+		CClinetSocket* pclient = CClinetSocket::getInstance();		
+		return pclient->DealCommand();
+	}
+	void CloseCliSocket() {
+		CClinetSocket::getInstance()->CloseCliSocket();
+	}
+	int SendCmdPack(int nCmd, bool AutoClose = true,
+		BYTE* pData = NULL, size_t nLength = 0) {			
+		bool ret = InitSocket();
+		if (ret == false) {
+			AfxMessageBox("初始化失败！");
+			return -1;
+		}
+		ret = SendPack(CPacket(nCmd, pData, nLength));
+		if (ret == false) {
+			TRACE("Client Test Send cmd is failed\r\n");
+			return -2;
+		}
+		int cmd = DealCommand();
+		//TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
+		if (AutoClose)
+			CloseCliSocket();
+		return cmd;
+	}
+	int Bytes2Image(CImage& image) {
+		CClinetSocket* pclient = CClinetSocket::getInstance();
+		return CTool::Bytes2Image(image, pclient->GetPacket().strData);
+	}
 protected:
 	static unsigned __stdcall threadEntry(void* arg);
 	//控制层的线程启动，这里参数需要考虑传递到视图层和模型层，那么利用消息机制的话就不用去传递参数？
