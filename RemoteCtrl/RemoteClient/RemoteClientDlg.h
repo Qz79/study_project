@@ -21,23 +21,7 @@ public:
 #endif
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
-
-public:
-	bool isFull()const {
-		return m_isFull;
-	}
-	CImage& GetImage() {
-		return m_image;
-	}
-	void SetImageStatus(bool isFull=false) {
-		m_isFull = isFull;
-	}
-private:
-	CImage m_image;
-	bool m_isFull;
-	bool m_isClose;
-	// 实现
+	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持	
 protected:
 	HICON m_hIcon;
 	CDlgStatus m_dlgStatus;

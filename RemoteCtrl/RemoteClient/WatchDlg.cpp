@@ -72,8 +72,7 @@ void CWatchDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
-		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-		if (pParent->isFull()) {
+		if (isFull()) {
 			//TODO：做显示处理
 			/*
 			首先显示就应该想到DC，在MFC中CDC的类就是负责，文字，图像，绘制，背景，这一系列都与显示有关
@@ -83,21 +82,21 @@ void CWatchDlg::OnTimer(UINT_PTR nIDEvent)
 			CRect rect;
 			m_picture.GetWindowRect(rect);
 			if (m_nObjWidth == -1) {
-				m_nObjWidth = pParent->GetImage().GetWidth();
+				m_nObjWidth = GetImage().GetWidth();
 			}
 			if (m_nObjHeight == -1) {
-				m_nObjHeight = pParent->GetImage().GetHeight();
+				m_nObjHeight = GetImage().GetHeight();
 			}
 			//pParent->GetImage().BitBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, SRCCOPY);
 			//这里依旧需要优化，监控端的画面比例需要获取，再去适配客户端大小，当服务端大小改变时，图像理应随之改变
-			pParent->GetImage().StretchBlt(m_picture.GetDC()->GetSafeHdc(),
+			GetImage().StretchBlt(m_picture.GetDC()->GetSafeHdc(),
 				0, 0, rect.Width(), rect.Height(), SRCCOPY);//对位图的缩放
 		
 			CClientDC ClientDC(this);
 			ClientDC.SetWindowExt(m_nObjWidth, m_nObjHeight);
 			m_picture.InvalidateRect(NULL);
-			pParent->GetImage().Destroy();
-			pParent->SetImageStatus();
+			GetImage().Destroy();
+			SetImageStatus();
 		}
 	}
 	CDialog::OnTimer(nIDEvent);

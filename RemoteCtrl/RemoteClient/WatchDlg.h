@@ -34,9 +34,21 @@ public:
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnStnClickedStaticPicture();
 public:
+	bool isFull()const {
+		return m_isFull;
+	}
+	CImage& GetImage() {
+		return m_image;
+	}
+	void SetImageStatus(bool isFull = false) {
+		m_isFull = isFull;
+	}
 	int m_nObjWidth;
 	int m_nObjHeight;
 	virtual void OnOK();
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
+private:
+	CImage m_image;
+	bool m_isFull;
 };

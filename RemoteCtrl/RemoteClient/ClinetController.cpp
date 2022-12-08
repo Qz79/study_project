@@ -49,7 +49,7 @@ void CClientController::threadWatch()
 	Sleep(50);
 	ULONGLONG nTick = GetTickCount64();
 	while (!m_isClosed) {
-		if (m_RemoteDlg.isFull() == false) {
+		if (m_WatchDlg.isFull() == false) {
 			if (GetTickCount64() - nTick < 200) {
 				Sleep(200 - DWORD(GetTickCount64() - nTick));
 			}
