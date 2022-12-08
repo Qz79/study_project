@@ -314,104 +314,6 @@ void CRemoteClientDlg::LoadFileCurrent()
 	//TODO:大文件传输需要额外处理
 }
 
-void CRemoteClientDlg::threadEntryForDownFile(void* arg)
-{
-	//当起线程的时候就应该考虑，线程安全问题，参数能否发送到主线程上去
-	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
-	thiz->threadDownFile(); 
-	_endthread();
-}
-
-void CRemoteClientDlg::threadDownFile()
-{
-	int SelectedList = m_List.GetSelectionMark();
-	CString strPath = m_List.GetItemText(SelectedList, 0);
-	CFileDialog dlg(false, NULL, strPath,
-		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, this);
-	FILE* pfile = NULL;
-	if (dlg.DoModal() == IDOK) {
-		pfile = fopen(dlg.GetPathName(), "wb+");
-		if (pfile == NULL) {
-			AfxMessageBox(_T("本地没有权限保存文件或无法创建"));
-			m_dlgStatus.ShowWindow(SW_HIDE);
-			return;
-		}
-	}
-	HTREEITEM hTreeSelect = m_Tree.GetSelectedItem();
-	strPath = GetPath(hTreeSelect) + strPath;
-	TRACE("strPath:%s\r\n", strPath);
-	CClinetSocket* pclient = CClinetSocket::getInstance();
-	do {
-		//这里利用自定义消息机制去解决线程安全问题的参数发送问题
-		//int ret = SendCmdPack(4, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
-		int ret = SendMessage(WM_SEND_PACKET, 4 << 1 | 0, (LPARAM)(LPCSTR)strPath);
-		if (ret < 0) {
-			AfxMessageBox(_T("发送命令失败！"));
-			TRACE("send four cmd failed:%d\r\n", ret);
-			break;
-		}
-
-		long long nLength = *(long long*)pclient->GetPacket().strData.c_str();
-		if (nLength == 0) {
-			AfxMessageBox(_T("文件长度为零或无法打开"));
-			break;
-		}
-		long long count = 0;
-		while (count < nLength) {
-			ret = pclient->DealCommand();
-			if (ret < 0) {
-				AfxMessageBox(_T("传输失败！"));
-				TRACE("DealCmd failed:%d\r\n", ret);
-				break;
-			}
-			fwrite(pclient->GetPacket().strData.c_str(), 1,
-				pclient->GetPacket().strData.size(), pfile);
-			count += pclient->GetPacket().strData.size();
-		}
-	} while (false);
-	fclose(pfile);
-	pclient->CloseCliSocket();
-	m_dlgStatus.ShowWindow(SW_HIDE);
-	EndWaitCursor();
-	MessageBox(_T("下载完成"), _T("完成"));
-}
-
-void CRemoteClientDlg::threadEntryForWatch(void* arg)
-{
-	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
-	thiz->threadWatch();
-	_endthread();
-}
-
-void CRemoteClientDlg::threadWatch()
-{
-	Sleep(50);
-	CClientController* pCtrl = CClientController::getInstance();
-	//ULONGLONG tick = GetTickCount64();
-	while (!m_isClose) {
-		/*if ((GetTickCount64() - tick) < 100) {
-			Sleep(GetTickCount64() - tick);
-		}*/
-		if (m_isFull == false) {
-			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
-			if(ret==6){
-				if (pCtrl->Bytes2Image(m_image) == 0) {
-					m_isFull = true;
-				}
-				else {
-					TRACE("获取图片失败\r\n");
-				}
-								
-			}
-			else {
-			Sleep(1);
-		}
-	}
-		else {
-			Sleep(1);
-		}
-	}
-}
 
 void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
@@ -476,13 +378,9 @@ void CRemoteClientDlg::OnRunFile()
 
 void CRemoteClientDlg::OnDownFile()
 {
-	//开线程
-	_beginthread(CRemoteClientDlg::threadEntryForDownFile, 0, this);
-	BeginWaitCursor();
-	m_dlgStatus.ShowWindow(SW_SHOW);
-	m_dlgStatus.m_EditStatus.SetWindowText(_T("命令执行中......"));
-	m_dlgStatus.SetActiveWindow();
-	m_dlgStatus.CenterWindow();
+	int SelectedList = m_List.GetSelectionMark();
+	CString strPath = m_List.GetItemText(SelectedList, 0);
+	int ret=CClientController::getInstance()->DownFile(strPath);
 }
 
 
@@ -543,22 +441,8 @@ LRESULT CRemoteClientDlg::SendPack(WPARAM wParam, LPARAM lParam)
 void CRemoteClientDlg::OnBnClickedBtnWatch()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	m_isClose = false;
-	CWatchDlg dlg(this);
-	HANDLE hThread =(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);	
-	dlg.DoModal();
-	m_isClose = true;
-	WaitForSingleObject(hThread, 500);
+	CClientController::getInstance()->StratWatchcreen();
 }
-
-
-//void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
-//{
-//	// TODO: 在此添加消息处理程序代码和/或调用默认值
-//
-//	CDialogEx::OnTimer(nIDEvent);
-//}
-
 
 void CRemoteClientDlg::OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult)
 {

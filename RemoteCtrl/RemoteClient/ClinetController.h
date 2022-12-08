@@ -58,7 +58,37 @@ public:
 		CClinetSocket* pclient = CClinetSocket::getInstance();
 		return CTool::Bytes2Image(image, pclient->GetPacket().strData);
 	}
+	int DownFile(CString strPath) {
+		CFileDialog dlg(false, NULL, strPath,
+			OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, &m_RemoteDlg);
+		if (dlg.DoModal() == IDOK) {
+			m_strRemote = strPath;
+			m_strLocal = dlg.GetPathName();
+			m_hThreadDown=(HANDLE*)_beginthread(&CClientController::threadEntryForDownFile, 0, this);
+			if (WaitForSingleObject(m_hThreadDown, 0) == WAIT_TIMEOUT) {
+				return -1;
+			}
+			m_RemoteDlg.BeginWaitCursor();
+			m_StatusDlg.ShowWindow(SW_SHOW);
+			m_StatusDlg.m_EditStatus.SetWindowText(_T("命令执行中......"));
+			m_StatusDlg.SetActiveWindow();
+			m_StatusDlg.CenterWindow();
+		}
+	
+	}
+	void StratWatchcreen() {
+		m_isClosed = false;
+		CWatchDlg dlg(&m_RemoteDlg);
+		m_hThreadWatch = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
+		dlg.DoModal();
+		m_isClosed = true;
+		WaitForSingleObject(m_hThreadWatch, 500);
+	}
 protected:
+	static void threadEntryForWatch(void* arg);
+	void threadWatch();
+	static void threadEntryForDownFile(void* arg);
+	void threadDownFile();
 	static unsigned __stdcall threadEntry(void* arg);
 	//控制层的线程启动，这里参数需要考虑传递到视图层和模型层，那么利用消息机制的话就不用去传递参数？
 	void threadFunc();
@@ -86,6 +116,9 @@ protected:
 	}MSGINFO;
 	CClientController():m_WatchDlg(&m_RemoteDlg), m_StatusDlg(&m_RemoteDlg)
 	{
+		m_isClosed = true;
+		m_hThreadWatch = INVALID_HANDLE_VALUE;
+		m_hThreadDown = INVALID_HANDLE_VALUE;
 		m_hThread = INVALID_HANDLE_VALUE;
 		m_nThreadID = -1;
 	}
@@ -117,6 +150,11 @@ private:
 	CWatchDlg m_WatchDlg;
 	CDlgStatus m_StatusDlg;
 	HANDLE m_hThread;
+	HANDLE m_hThreadDown;
+	CString m_strLocal;//文件本地路径
+	CString m_strRemote;  //文件的远程路径
+	HANDLE m_hThreadWatch;
+	bool m_isClosed;//监视是否关闭
 	unsigned int m_nThreadID;
 	static CClientController* m_instance;
 	static Helper m_helper;

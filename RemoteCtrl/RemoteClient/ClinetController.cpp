@@ -36,6 +36,87 @@ int CClientController::InitController()
 	return 0;
 }
 
+void CClientController::threadEntryForWatch(void* arg)
+{
+
+	CClientController* thiz = (CClientController*)arg;
+	thiz->threadWatch();
+	_endthread();
+}
+
+void CClientController::threadWatch()
+{
+	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
+	while (!m_isClosed) {
+		if (m_RemoteDlg.isFull() == false) {
+			if (GetTickCount64() - nTick < 200) {
+				Sleep(200 - DWORD(GetTickCount64() - nTick));
+			}
+			nTick = GetTickCount64();
+			int ret = SendCmdPack(6);
+			if (ret == 1) {
+				//TRACE("成功发送请求图片命令\r\n");
+			}
+			else {
+				TRACE("获取图片失败！ret = %d\r\n", ret);
+			}
+		}
+		Sleep(1);
+	}
+	TRACE("thread end %d\r\n", m_isClosed);
+}
+
+void CClientController::threadEntryForDownFile(void* arg)
+{
+	CClientController* thiz = (CClientController * )arg;
+	thiz->threadDownFile();
+	_endthread();
+}
+
+void CClientController::threadDownFile()
+{
+	FILE* pfile = fopen(m_strLocal, "wb+");
+	if (pfile == NULL) {
+		AfxMessageBox(_T("本地没有权限保存文件或无法创建"));
+		m_StatusDlg.ShowWindow(SW_HIDE);
+		m_RemoteDlg.EndWaitCursor();
+		return;
+	}
+	CClinetSocket* pclient = CClinetSocket::getInstance();
+	do {
+		int ret = SendCmdPack(4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		if (ret < 0) {
+			AfxMessageBox(_T("发送命令失败！"));
+			TRACE("send four cmd failed:%d\r\n", ret);
+			break;
+		}
+
+		long long nLength = *(long long*)pclient->GetPacket().strData.c_str();
+		if (nLength == 0) {
+			AfxMessageBox(_T("文件长度为零或无法打开"));
+			break;
+		}
+		long long count = 0;
+		while (count < nLength) {
+			ret = pclient->DealCommand();
+			if (ret < 0) {
+				AfxMessageBox(_T("传输失败！"));
+				TRACE("DealCmd failed:%d\r\n", ret);
+				break;
+			}
+			fwrite(pclient->GetPacket().strData.c_str(), 1,
+				pclient->GetPacket().strData.size(), pfile);
+			count += pclient->GetPacket().strData.size();
+		}
+	} while (false);
+	fclose(pfile);
+	pclient->CloseCliSocket();
+	m_StatusDlg.ShowWindow(SW_HIDE);
+	m_RemoteDlg.EndWaitCursor();
+	m_RemoteDlg.MessageBox(_T("下载完成"), _T("完成"));
+}
+
 unsigned __stdcall CClientController::threadEntry(void* arg)
 {
 	CClientController* thiz = (CClientController*)arg;

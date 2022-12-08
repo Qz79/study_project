@@ -59,10 +59,6 @@ private:
 	void DeleteTreeChildItem(HTREEITEM hTree);
 	void LoadFileInfo();
 	void LoadFileCurrent();
-	static void threadEntryForDownFile(void* arg);
-	void threadDownFile();
-	static void threadEntryForWatch(void* arg);//静态函数没有this指针
-	void threadWatch();
 public:
 	afx_msg void OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
 	CListCtrl m_List;
