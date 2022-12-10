@@ -2,6 +2,8 @@
 
 #include<string>
 #include < vector> 
+#include<list>
+#include<map>
 
 #pragma pack(push) //让封装类对齐
 #pragma pack(1)
@@ -14,8 +16,9 @@ public:
 		sCmd = pack.sCmd;
 		strData = pack.strData;
 		sSum = pack.sSum;
+		hEvent = pack.hEvent;
 	}
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize) {
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent) {
 		sHead = 0xFEFF;
 		nLength = nSize + 4;
 		sCmd = nCmd;
@@ -31,10 +34,11 @@ public:
 		for (size_t j = 0; j < strData.size(); j++) {
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
+		this->hEvent = hEvent;
 	}
 	//BYTE = unsigned char ,size_t =unsigned int ;
 	//nSize 作为传入传出参数，传入时为data的长度，传出是用掉了多少
-	CPacket(const BYTE* pData, size_t& nSize)
+	CPacket(const BYTE* pData, size_t& nSize):hEvent(INVALID_HANDLE_VALUE)
 	{
 		size_t i = 0;
 		for (; i < nSize; i++) {
@@ -83,6 +87,7 @@ public:
 			sCmd = pack.sCmd;
 			strData = pack.strData;
 			sSum = pack.sSum;
+			hEvent = pack.hEvent;
 		}
 		return *this;
 	}
@@ -90,7 +95,7 @@ public:
 		//求包的长度
 		return nLength + 6;
 	}
-	const char* Data(std::string strOut)const {
+	const char* Data(std::string& strOut)const {
 		strOut.resize(nLength + 6);
 		BYTE* pData = (BYTE*)strOut.c_str();
 		*(WORD*)pData = sHead; pData += 2;
@@ -109,6 +114,7 @@ public:
 	WORD sSum;           // 和校验 除了包头和长度以外的数据加起来
 	//std::string strOut;  //被弃用，由于需要从控制层过桥发送给视图层，
 	//所以不可以改变包对象，只能使用包数据
+	HANDLE hEvent;
 };
 #pragma pack(pop)
 typedef struct MouseEvent {
@@ -184,7 +190,7 @@ public:
 			//len 接收到数据的大小
 			size_t len = recv(m_clisock, buffer + index, BUFFER_SIZE - index, 0);
 			//TRACE("len:%d\r\n", len);
-			if ((len <= 0)&&(index<=0)) {//当缓冲区依旧有数据，只有index剩余长度读取完毕才会全部去读，问题之三
+			if (((int)len <= 0)&&((int)index<=0)) {//当缓冲区依旧有数据，只有index剩余长度读取完毕才会全部去读，问题之三
 				return -1;
 			}
 			index += len;
@@ -204,10 +210,11 @@ public:
 	}
 	bool Send(const CPacket& pack) {
 		if (m_clisock == -1)return false;
-		std::string strOut;
+		std::string strOut = "";
 		pack.Data(strOut);
 		TRACE("Clinet send Data:%s\r\n", pack.strData);
-		return send(m_clisock, strOut.c_str(), strOut.size(), 0) > 0;
+		bool ret = send(m_clisock, strOut.c_str(), strOut.size(), 0);
+		return ret;
 	}
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {
@@ -231,6 +238,8 @@ public:
 		m_clisock = INVALID_SOCKET;
 	}
 private:
+	static void threadEntryFunc(void* arg);
+	void threadFunc();
 	CClinetSocket(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
 		m_nIP = ss.m_nIP;
@@ -268,6 +277,7 @@ private:
 			delete temp;
 		}
 	}
+	
 	class Helper {
 	public:
 		Helper() {
@@ -279,6 +289,8 @@ private:
 
 	};
 private:
+	std::list<CPacket> lstSend;
+	std::map<HANDLE, std::list<CPacket>> m_mapAck;
 	std::vector<char> m_buffer;
 	static CClinetSocket* m_istance;
 	static Helper m_helper;

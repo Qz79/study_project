@@ -134,7 +134,6 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	如果你希望知道用户在对话框中到底输入了什么，就应该在访问变量前调用UpdateData(TRUE)。*/
 	m_addr_server = 0xC0A87387; //192.168.115.135
 	m_nPort = "9527";
-	UpdateData();
 	CClientController::getInstance()->
 		UpdateAddr(m_addr_server, atoi((LPCTSTR)m_nPort));
 	UpdateData(FALSE);

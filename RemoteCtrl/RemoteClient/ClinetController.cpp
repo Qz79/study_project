@@ -2,6 +2,7 @@
 #include "ClinetController.h"
 CClientController* CClientController::m_instance = NULL;
 std::map<UINT, CClientController::MSGFUNC> CClientController::m_mapMsgFunc;
+CClientController::Helper CClientController::m_helper;
 CClientController* CClientController::getInstance()
 {
 	if (m_instance == NULL) {
@@ -54,7 +55,7 @@ void CClientController::threadWatch()
 				Sleep(200 - DWORD(GetTickCount64() - nTick));
 			}
 			nTick = GetTickCount64();
-			int ret = SendCmdPack(6);
+			int ret = SendCmdPack(6);//窗口句柄参数添加后进行修改
 			if (ret == 1) {
 				//TRACE("成功发送请求图片命令\r\n");
 			}

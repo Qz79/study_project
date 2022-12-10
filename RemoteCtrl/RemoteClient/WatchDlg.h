@@ -37,9 +37,9 @@ public:
 	bool isFull()const {
 		return m_isFull;
 	}
-	CImage& GetImage() {
-		return m_image;
-	}
+	////CImage& GetImage() {
+	//	return m_image;
+	//}
 	void SetImageStatus(bool isFull = false) {
 		m_isFull = isFull;
 	}
@@ -49,6 +49,6 @@ public:
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
 private:
-	CImage m_image;
+	//CImage m_image;
 	bool m_isFull;
 };

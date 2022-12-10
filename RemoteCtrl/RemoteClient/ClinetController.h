@@ -74,13 +74,13 @@ public:
 			m_StatusDlg.SetActiveWindow();
 			m_StatusDlg.CenterWindow();
 		}
-	
+		return 0;
 	}
 	void StratWatchcreen() {
 		m_isClosed = false;
-		CWatchDlg dlg(&m_RemoteDlg);
-		m_hThreadWatch = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
-		dlg.DoModal();
+		//CWatchDlg dlg(&m_RemoteDlg);
+		m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadEntryForWatch, 0, this);
+		m_RemoteDlg.DoModal();
 		m_isClosed = true;
 		WaitForSingleObject(m_hThreadWatch, 500);
 	}
@@ -123,9 +123,9 @@ protected:
 		m_nThreadID = -1;
 	}
 	~CClientController() {
-
+		WaitForSingleObject(m_hThread, 100);
 	}
-	static CClientController* releaseInstance() {
+	static void releaseInstance() {
 		if (m_instance != NULL) {
 			CClientController* temp = m_instance;
 			m_instance = NULL;
@@ -136,7 +136,7 @@ private:
 	class Helper {
 	public:
 		Helper() {
-			CClientController::getInstance();
+			//CClientController::getInstance();
 		}
 		~Helper() {
 			CClientController::releaseInstance();
