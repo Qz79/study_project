@@ -25,10 +25,6 @@ public:
 		CClinetSocket* pclient = CClinetSocket::getInstance();
 		return  pclient->InitSocket();
 	}
-	int SendPack(const CPacket& pack) {
-		CClinetSocket* pclient = CClinetSocket::getInstance();
-		return pclient->Send(pack);
-	}
 	int DealCommand() {
 		CClinetSocket* pclient = CClinetSocket::getInstance();		
 		return pclient->DealCommand();
@@ -36,59 +32,25 @@ public:
 	void CloseCliSocket() {
 		CClinetSocket::getInstance()->CloseCliSocket();
 	}
-	int SendCmdPack(int nCmd, bool AutoClose = true,
-		BYTE* pData = NULL, size_t nLength = 0) {			
-		bool ret = InitSocket();
-		if (ret == false) {
-			AfxMessageBox("初始化失败！");
-			return -1;
-		}
-		ret = SendPack(CPacket(nCmd, pData, nLength));
-		if (ret == false) {
-			TRACE("Client Test Send cmd is failed\r\n");
-			return -2;
-		}
-		int cmd = DealCommand();
-		//TRACE("recv the cmd is:%d\r\n", pclient->GetPacket().sCmd);
-		if (AutoClose)
-			CloseCliSocket();
-		return cmd;
-	}
+	bool SendCommandPacket(
+		HWND hWnd,//数据包受到后，需要应答的窗口
+		int nCmd,
+		bool bAutoClose = true,
+		BYTE* pData = NULL,
+		size_t nLength = 0,
+		WPARAM wParam = 0);
 	int Bytes2Image(CImage& image) {
 		CClinetSocket* pclient = CClinetSocket::getInstance();
 		return CTool::Bytes2Image(image, pclient->GetPacket().strData);
 	}
-	int DownFile(CString strPath) {
-		CFileDialog dlg(false, NULL, strPath,
-			OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, &m_RemoteDlg);
-		if (dlg.DoModal() == IDOK) {
-			m_strRemote = strPath;
-			m_strLocal = dlg.GetPathName();
-			m_hThreadDown=(HANDLE*)_beginthread(&CClientController::threadEntryForDownFile, 0, this);
-			if (WaitForSingleObject(m_hThreadDown, 0) == WAIT_TIMEOUT) {
-				return -1;
-			}
-			m_RemoteDlg.BeginWaitCursor();
-			m_StatusDlg.ShowWindow(SW_SHOW);
-			m_StatusDlg.m_EditStatus.SetWindowText(_T("命令执行中......"));
-			m_StatusDlg.SetActiveWindow();
-			m_StatusDlg.CenterWindow();
-		}
-		return 0;
-	}
-	void StratWatchcreen() {
-		m_isClosed = false;
-		//CWatchDlg dlg(&m_RemoteDlg);
-		m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadEntryForWatch, 0, this);
-		m_RemoteDlg.DoModal();
-		m_isClosed = true;
-		WaitForSingleObject(m_hThreadWatch, 500);
-	}
+	int DownFile(CString strPath);
+	void DownloadEnd();
+	void StratWatchcreen();
 protected:
 	static void threadEntryForWatch(void* arg);
 	void threadWatch();
 	static void threadEntryForDownFile(void* arg);
-	void threadDownFile();
+	//void threadDownFile();
 	static unsigned __stdcall threadEntry(void* arg);
 	//控制层的线程启动，这里参数需要考虑传递到视图层和模型层，那么利用消息机制的话就不用去传递参数？
 	void threadFunc();

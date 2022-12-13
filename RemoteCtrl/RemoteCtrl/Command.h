@@ -357,7 +357,7 @@ protected:
     }
     int TestLink(std::list<CPacket>& lstPacket, CPacket& inPacket)
     {
-       lstPacket.push_back(CPacket(9, NULL, 0));
+       lstPacket.push_back(CPacket(100, NULL, 0));
         return 0;
     }
 };

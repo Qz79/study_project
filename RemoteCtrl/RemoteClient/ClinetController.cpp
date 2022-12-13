@@ -37,6 +37,55 @@ int CClientController::InitController()
 	return 0;
 }
 
+bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData, size_t nLength, WPARAM wParam)
+{
+	TRACE("cmd:%d %s start %lld \r\n", nCmd, __FUNCTION__, GetTickCount64());
+	CClinetSocket* pClient = CClinetSocket::getInstance();
+	bool ret = pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose, wParam);
+	return ret;
+}
+
+int CClientController::DownFile(CString strPath)
+{
+	CFileDialog dlg(
+		FALSE, NULL,
+		strPath, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
+		NULL, &m_RemoteDlg);
+	if (dlg.DoModal() == IDOK) {
+		m_strRemote = strPath;
+		m_strLocal = dlg.GetPathName();
+		FILE* pFile = fopen(m_strLocal, "wb+");
+		if (pFile == NULL) {
+			AfxMessageBox(_T("本地没有权限保存该文件，或者文件无法创建！！！"));
+			return -1;
+		}
+		SendCommandPacket(m_RemoteDlg, 4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(), (WPARAM)pFile);
+		m_RemoteDlg.BeginWaitCursor();
+		m_StatusDlg.m_EditStatus.SetWindowText(_T("命令正在执行中！"));
+		m_StatusDlg.ShowWindow(SW_SHOW);
+		m_StatusDlg.CenterWindow(&m_RemoteDlg);
+		m_StatusDlg.SetActiveWindow();
+	}
+	return 0;
+}
+
+void CClientController::DownloadEnd()
+{
+	m_StatusDlg.ShowWindow(SW_HIDE);
+	m_RemoteDlg.EndWaitCursor();
+	m_RemoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
+}
+
+
+void CClientController::StratWatchcreen()
+{
+	m_isClosed = false;
+	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadEntryForWatch, 0, this);
+	m_WatchDlg.DoModal();
+	m_isClosed = true;
+	WaitForSingleObject(m_hThreadWatch, 500);
+}
+
 void CClientController::threadEntryForWatch(void* arg)
 {
 
@@ -55,7 +104,7 @@ void CClientController::threadWatch()
 				Sleep(200 - DWORD(GetTickCount64() - nTick));
 			}
 			nTick = GetTickCount64();
-			int ret = SendCmdPack(6);//窗口句柄参数添加后进行修改
+			int ret = SendCommandPacket(m_WatchDlg.GetSafeHwnd(), 6, true, NULL, 0);
 			if (ret == 1) {
 				//TRACE("成功发送请求图片命令\r\n");
 			}
@@ -68,55 +117,12 @@ void CClientController::threadWatch()
 	TRACE("thread end %d\r\n", m_isClosed);
 }
 
-void CClientController::threadEntryForDownFile(void* arg)
-{
-	CClientController* thiz = (CClientController * )arg;
-	thiz->threadDownFile();
-	_endthread();
-}
-
-void CClientController::threadDownFile()
-{
-	FILE* pfile = fopen(m_strLocal, "wb+");
-	if (pfile == NULL) {
-		AfxMessageBox(_T("本地没有权限保存文件或无法创建"));
-		m_StatusDlg.ShowWindow(SW_HIDE);
-		m_RemoteDlg.EndWaitCursor();
-		return;
-	}
-	CClinetSocket* pclient = CClinetSocket::getInstance();
-	do {
-		int ret = SendCmdPack(4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
-		if (ret < 0) {
-			AfxMessageBox(_T("发送命令失败！"));
-			TRACE("send four cmd failed:%d\r\n", ret);
-			break;
-		}
-
-		long long nLength = *(long long*)pclient->GetPacket().strData.c_str();
-		if (nLength == 0) {
-			AfxMessageBox(_T("文件长度为零或无法打开"));
-			break;
-		}
-		long long count = 0;
-		while (count < nLength) {
-			ret = pclient->DealCommand();
-			if (ret < 0) {
-				AfxMessageBox(_T("传输失败！"));
-				TRACE("DealCmd failed:%d\r\n", ret);
-				break;
-			}
-			fwrite(pclient->GetPacket().strData.c_str(), 1,
-				pclient->GetPacket().strData.size(), pfile);
-			count += pclient->GetPacket().strData.size();
-		}
-	} while (false);
-	fclose(pfile);
-	pclient->CloseCliSocket();
-	m_StatusDlg.ShowWindow(SW_HIDE);
-	m_RemoteDlg.EndWaitCursor();
-	m_RemoteDlg.MessageBox(_T("下载完成"), _T("完成"));
-}
+//void CClientController::threadEntryForDownFile(void* arg)
+//{
+//	CClientController* thiz = (CClientController * )arg;
+//	thiz->threadDownFile();
+//	_endthread();
+//}
 
 unsigned __stdcall CClientController::threadEntry(void* arg)
 {

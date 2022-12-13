@@ -4,7 +4,8 @@
 #include < vector> 
 #include<list>
 #include<map>
-
+#define WM_SEND_PACK (WM_USER+1) //发送包数据
+#define WM_SEND_PACK_ACK (WM_USER+2) //发送包数据应答
 #pragma pack(push) //让封装类对齐
 #pragma pack(1)
 class CPacket {
@@ -16,9 +17,9 @@ public:
 		sCmd = pack.sCmd;
 		strData = pack.strData;
 		sSum = pack.sSum;
-		hEvent = pack.hEvent;
+		
 	}
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent) {
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize) {
 		sHead = 0xFEFF;
 		nLength = nSize + 4;
 		sCmd = nCmd;
@@ -34,11 +35,11 @@ public:
 		for (size_t j = 0; j < strData.size(); j++) {
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
-		this->hEvent = hEvent;
+	
 	}
 	//BYTE = unsigned char ,size_t =unsigned int ;
 	//nSize 作为传入传出参数，传入时为data的长度，传出是用掉了多少
-	CPacket(const BYTE* pData, size_t& nSize):hEvent(INVALID_HANDLE_VALUE)
+	CPacket(const BYTE* pData, size_t& nSize)
 	{
 		size_t i = 0;
 		for (; i < nSize; i++) {
@@ -87,7 +88,7 @@ public:
 			sCmd = pack.sCmd;
 			strData = pack.strData;
 			sSum = pack.sSum;
-			hEvent = pack.hEvent;
+			
 		}
 		return *this;
 	}
@@ -114,7 +115,7 @@ public:
 	WORD sSum;           // 和校验 除了包头和长度以外的数据加起来
 	//std::string strOut;  //被弃用，由于需要从控制层过桥发送给视图层，
 	//所以不可以改变包对象，只能使用包数据
-	HANDLE hEvent;
+	
 };
 #pragma pack(pop)
 typedef struct MouseEvent {
@@ -140,6 +141,34 @@ typedef struct file_info {
 	BOOL HasNext;
 	char FileName[256];
 }FILEINFO, * PFILEINFO;
+enum {
+	CSM_AUTOCLOSE = 1,//CSM = Client Socket Mode 自动关闭模式
+};
+
+typedef struct PacketData {
+	std::string strData;
+	UINT nMode;
+	WPARAM wParam;
+	PacketData(const char* pData, size_t nLen, UINT mode, WPARAM nParam = 0) {
+		strData.resize(nLen);
+		memcpy((char*)strData.c_str(), pData, nLen);
+		nMode = mode;
+		wParam = nParam;
+	}
+	PacketData(const PacketData& data) {
+		strData = data.strData;
+		nMode = data.nMode;
+		wParam = data.wParam;
+	}
+	PacketData& operator=(const PacketData& data) {
+		if (this != &data) {
+			strData = data.strData;
+			nMode = data.nMode;
+			wParam = data.wParam;
+		}
+		return *this;
+	}
+}PACKET_DATA;
 std::string GetErrorInfo(int wsaErrCode);
 class CClinetSocket
 {
@@ -204,18 +233,8 @@ public:
 		}
 		return -1;
 	}
-	bool Send(const char* pData, int nSize) {
-		if (m_clisock == -1)return false;
-		return send(m_clisock, pData, nSize, 0) > 0;
-	}
-	bool Send(const CPacket& pack) {
-		if (m_clisock == -1)return false;
-		std::string strOut = "";
-		pack.Data(strOut);
-		TRACE("Clinet send Data:%s\r\n", pack.strData);
-		bool ret = send(m_clisock, strOut.c_str(), strOut.size(), 0);
-		return ret;
-	}
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true, WPARAM wParam = 0);
+	
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {
 			strPath = m_packet.strData;
@@ -238,27 +257,22 @@ public:
 		m_clisock = INVALID_SOCKET;
 	}
 private:
-	static void threadEntryFunc(void* arg);
-	void threadFunc();
-	CClinetSocket(const CClinetSocket& ss) {
-		m_clisock = ss.m_clisock;
-		m_nIP = ss.m_nIP;
-		m_nPort = ss.m_nPort;
-	}
+	static unsigned __stdcall threadEntryFunc(void* arg);
+	void threadFunc2();
+
+	CClinetSocket(const CClinetSocket& ss);
 	CClinetSocket& operator=(const CClinetSocket& ss) {
 		m_clisock = ss.m_clisock;
 		m_nIP = ss.m_nIP;
 		m_nPort = ss.m_nPort;
 	}
-	CClinetSocket():m_nIP(INADDR_ANY),m_nPort(0) {
-		m_clisock = INVALID_SOCKET;
-		if (InitSockEnv() == FALSE) {
-			MessageBox(NULL, _T("无法初始套接字环境,请检网络设置"), _T("网络环境初始化失败"), MB_OK | MB_ICONERROR);
-			exit(0);
-		}	
-		m_buffer.resize(BUFFER_SIZE);
-		memset(m_buffer.data(), 0, BUFFER_SIZE);
+	CClinetSocket();
+	bool Send(const char* pData, int nSize) {
+		if (m_clisock == -1)return false;
+		return send(m_clisock, pData, nSize, 0) > 0;
 	}
+	bool Send(const CPacket& pack); 
+	void SendPack(UINT nMsg, WPARAM wParam/*缓冲区的值*/, LPARAM lParam/*缓冲区的长度*/);
 	~CClinetSocket() {
 		closesocket(m_clisock);
 		WSACleanup();
@@ -289,8 +303,14 @@ private:
 
 	};
 private:
-	std::list<CPacket> lstSend;
-	std::map<HANDLE, std::list<CPacket>> m_mapAck;
+	//std::list<CPacket> lstSend;
+	//std::map<HANDLE, std::list<CPacket>> m_mapAck;
+	HANDLE m_eventInvoke;
+	UINT m_nThreadID;
+	HANDLE m_hThread;
+	typedef void(CClinetSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	std::map<UINT, MSGFUNC> m_mapFunc;
+	bool m_bAutoClose;
 	std::vector<char> m_buffer;
 	static CClinetSocket* m_istance;
 	static Helper m_helper;

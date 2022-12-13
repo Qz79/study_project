@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-
+#ifndef WM_SEND_PACK_ACK
+#define WM_SEND_PACK_ACK (WM_USER+2) //发送包数据应答
+#endif
 // CWatchDlg 对话框
 
 class CWatchDlg : public CDialog
@@ -25,6 +27,7 @@ public:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	CStatic m_picture;
+	afx_msg LRESULT OnSendPackAck(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
@@ -37,9 +40,9 @@ public:
 	bool isFull()const {
 		return m_isFull;
 	}
-	////CImage& GetImage() {
-	//	return m_image;
-	//}
+	CImage& GetImage() {
+		return m_image;
+	}
 	void SetImageStatus(bool isFull = false) {
 		m_isFull = isFull;
 	}
@@ -49,6 +52,6 @@ public:
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
 private:
-	//CImage m_image;
+	CImage m_image;
 	bool m_isFull;
 };
