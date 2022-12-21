@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "RemoteCtrl.h"
 #include "Command.h"
+#include<conio.h>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -16,95 +17,128 @@
 // 唯一的应用程序对象
 // 001测试分支切换演示
 CWinApp theApp;
-
+enum {
+    IocpListEmpty,
+    IocpListPush,
+    IocpListPop
+};
 using namespace std;
-
-
-//int ExcuteCommand(int nCmd) {
-//    int ret = 0;
-//    switch (nCmd) {
-//    case 1:
-//        ret = MakeDirverInfo();
-//        break;
-//    case 2:
-//        ret = MakeDirectoryInfo();
-//        break;
-//    case 3:
-//        ret = RunFile();
-//        break;
-//    case 4:
-//        ret = DownFile();
-//        break;
-//    case 5:
-//        ret = MoueEvent();
-//        break;
-//    case 6:
-//        ret = SendScreen();
-//        break;
-//    case 7:
-//        ret = LockMachine();
-//        /*Sleep(50);
-//        LockMachine();*///T0:测试多次调用线程会不会产生问题
-//        break;
-//    case 8:
-//        ret = UnLockMachine();
-//        break;
-//    case 9:
-//        ret = DeleteLocalFile();
-//    case 100:
-//        ret = TestLink();
-//        break;
-//    }
-//    /*T1:测试解锁
-//    UnLockMachine();
-//    TRACE("m_hWnd=%08x\r\n", dlg.m_hWnd);
-//    while (dlg.m_hWnd != NULL) {
-//        Sleep(10);
-//    }*/
-//    /*while ((dlg.m_hWnd != NULL)&&(dlg.m_hWnd != INVALID_HANDLE_VALUE))
-//        Sleep(100);
-//      T0: 测试多次调用线程会不会产生问题
-//    */
-//    return ret;
-//}
-int main()
-{
-    int nRetCode = 0;
-
-    HMODULE hModule = ::GetModuleHandle(nullptr);
-
-    if (hModule != nullptr)
-    {
-        // 初始化 MFC 并在失败时显示错误
-        if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
-        {
-            // TODO: 在此处为应用程序的行为编写代码。
-            wprintf(L"错误: MFC 初始化失败\n");
-            nRetCode = 1;
+typedef struct IocpParam {
+    int nOperator;//操作
+    std::string strData;//数据
+    _beginthread_proc_type cbFunc;//回调
+    IocpParam(int op, const char* sData, _beginthread_proc_type cb=NULL) {
+        nOperator = op;
+        strData = sData;
+        cbFunc = cb;
+    }
+    IocpParam() {
+        nOperator = -1;
+    }
+}IOCP_PARAM;
+void threadQueueEntry(HANDLE hIOCP) {
+    list<std::string> lstString;
+    DWORD dwTransferred = 0;
+    ULONG_PTR CompletionKey = 0;
+    OVERLAPPED* pOverlapped = NULL;
+    while (GetQueuedCompletionStatus(hIOCP, &dwTransferred, &CompletionKey, &pOverlapped, INFINITE)) {
+        if ((dwTransferred == 0) || (CompletionKey == NULL)) {
+            printf("thread is prepare to exit\r\n");
+            break;
         }
-        else
-        {
-        //    // TODO: 在此处为应用程序的行为编写代码。
-        //    // socket、bind、liten、accpet、read、write、close
-        //    // 初始化环境，Windows下面有一个环境的初始化的，用到WSADATA
-            CCommand cmd;
-            int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand,&cmd);
-            switch (ret) {
-            case -1:
-                MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
-                break;
-            case -2:
-                MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
-                break;
+        IOCP_PARAM* pParam = (IOCP_PARAM*)CompletionKey;
+        if (pParam->nOperator == IocpListPush) {
+            lstString.push_back(pParam->strData);
+        }
+        else if (pParam->nOperator == IocpListPop) {
+            string* pStr = NULL;
+            if (lstString.size() > 0) {
+                pStr = new string(lstString.front());
+                lstString.pop_front();
+            }
+            if (pParam->cbFunc) {
+                pParam->cbFunc(pStr);
             }   
         }
+        else if (pParam->nOperator == IocpListEmpty) {
+            lstString.clear();
+        }
+        delete pParam;
     }
-    else
-    {
-        // TODO: 更改错误代码以符合需要
-        wprintf(L"错误: GetModuleHandle 失败\n");
-        nRetCode = 1;
+    _endthread();
+}
+void func(void* arg) {
+    string* pstr = (string*)arg;
+    if (pstr != NULL) {
+        printf("pop from list:%s\r\n", pstr->c_str());
+        delete pstr;
     }
+    else {
+        printf("list is empty,no data!\r\n");
+    }
+    
+}
+int main()
+{
+    //利用完成端口写一个线程安全的队列
 
-    return nRetCode;
+    HANDLE hIOCP = INVALID_HANDLE_VALUE;
+    hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
+    HANDLE hThread=(HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
+    printf("press any key to exit...\n");
+    ULONGLONG tick = GetTickCount64();
+    while (_kbhit() != 0) {
+        if (GetTickCount64() - tick > 1000) {
+            PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM), (ULONG_PTR) new IOCP_PARAM(IocpListPop, "Hello world!"), NULL);
+        }
+        if (GetTickCount64() - tick > 2000) {
+            PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM),(ULONG_PTR) new IOCP_PARAM(IocpListPush,"Hello world!"), NULL);
+            tick = GetTickCount64();
+        }
+        Sleep(1);
+    }
+    if (hIOCP != NULL) {
+        //TODO:唤醒完成端口
+        PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
+        WaitForSingleObject(hThread, INFINITE);
+    }
+    CloseHandle(hIOCP);
+    printf("exit done\n");
+    ::exit(0);
+    //int nRetCode = 0;
+
+    //HMODULE hModule = ::GetModuleHandle(nullptr);
+
+    //if (hModule != nullptr)
+    //{
+    //    // 初始化 MFC 并在失败时显示错误
+    //    if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
+    //    {
+    //        // TODO: 在此处为应用程序的行为编写代码。
+    //        wprintf(L"错误: MFC 初始化失败\n");
+    //        nRetCode = 1;
+    //    }
+    //    else
+    //    {
+    //        CCommand cmd;
+    //        int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand,&cmd);
+    //        switch (ret) {
+    //        case -1:
+    //            MessageBox(NULL, _T("网络初始化失败，请检查网络"), _T("提示"), MB_OK | MB_ICONERROR);
+    //            break;
+    //        case -2:
+    //            MessageBox(NULL, _T("多次重试无效，结束程序"), _T("提示"), MB_OK | MB_ICONERROR);
+    //            break;
+    //        }   
+    //    }
+    //}
+    //else
+    //{
+    //    // TODO: 更改错误代码以符合需要
+    //    wprintf(L"错误: GetModuleHandle 失败\n");
+    //    nRetCode = 1;
+    //}
+
+    //return nRetCode;
+    return 0;
 }
