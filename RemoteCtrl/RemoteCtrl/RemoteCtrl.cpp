@@ -36,7 +36,7 @@ typedef struct IocpParam {
         nOperator = -1;
     }
 }IOCP_PARAM;
-void threadQueueEntry(HANDLE hIOCP) {
+void threadWork(HANDLE hIOCP) {
     list<std::string> lstString;
     DWORD dwTransferred = 0;
     ULONG_PTR CompletionKey = 0;
@@ -51,27 +51,30 @@ void threadQueueEntry(HANDLE hIOCP) {
             lstString.push_back(pParam->strData);
         }
         else if (pParam->nOperator == IocpListPop) {
-            string* pStr = NULL;
+            string str;
             if (lstString.size() > 0) {
-                pStr = new string(lstString.front());
+                str = lstString.front();
                 lstString.pop_front();
             }
             if (pParam->cbFunc) {
-                pParam->cbFunc(pStr);
-            }   
+                pParam->cbFunc(&str);
+            }
         }
         else if (pParam->nOperator == IocpListEmpty) {
             lstString.clear();
         }
         delete pParam;
     }
+}
+void threadQueueEntry(HANDLE hIOCP) {
+    threadWork(hIOCP);
     _endthread();
 }
 void func(void* arg) {
     string* pstr = (string*)arg;
     if (pstr != NULL) {
         printf("pop from list:%s\r\n", pstr->c_str());
-        delete pstr;
+        //delete pstr;
     }
     else {
         printf("list is empty,no data!\r\n");
@@ -81,15 +84,20 @@ void func(void* arg) {
 int main()
 {
     //利用完成端口写一个线程安全的队列
-
     HANDLE hIOCP = INVALID_HANDLE_VALUE;
     hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
+    if ((hIOCP == INVALID_HANDLE_VALUE) || (hIOCP == NULL)) {
+        printf("create hiop is failed %d\n", GetLastError());
+        return 1;
+    }
     HANDLE hThread=(HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
     printf("press any key to exit...\n");
     ULONGLONG tick = GetTickCount64();
-    while (_kbhit() != 0) {
-        if (GetTickCount64() - tick > 1000) {
-            PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM), (ULONG_PTR) new IOCP_PARAM(IocpListPop, "Hello world!"), NULL);
+    ULONGLONG tick0= GetTickCount64();
+    while (_kbhit() == 0) {
+        if (GetTickCount64() - tick0 > 1300) {
+            PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM), (ULONG_PTR) new IOCP_PARAM(IocpListPop, "Hello world!", func), NULL);
+            tick0 = GetTickCount64();
         }
         if (GetTickCount64() - tick > 2000) {
             PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM),(ULONG_PTR) new IOCP_PARAM(IocpListPush,"Hello world!"), NULL);
