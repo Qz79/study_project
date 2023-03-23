@@ -1,25 +1,26 @@
-#pragma once
+ï»¿#pragma once
 #include<list>
 #include<string>
 
-//ÀûÓÃÍê³É¶Ë¿ÚIOCP·â×°Ïß³Ì°²È«¶ÓÁĞ
+//åˆ©ç”¨å®Œæˆç«¯å£IOCPå°è£…çº¿ç¨‹å®‰å…¨é˜Ÿåˆ—
 
 template <typename T>
 class CQueueThread
-{
+{//çº¿ç¨‹å®‰å…¨é˜Ÿåˆ—ï¼Œåˆ©ç”¨ï¼ˆhIocpï¼‰
 public:
     typedef struct IocpParam {
-        int nOperator;//²Ù×÷
-        T strData;//Êı¾İ
+        int nOperator;//æ“ä½œ
+        T Data;//æ•°æ®
         HANDLE hEvent;
-        IocpParam(int op, const char* sData,HANDLE hEve==NULL) {
+        IocpParam(int op, const char* sData,HANDLE event=NULL) {
             nOperator = op;
-            strData = sData;
+            Data = sData;
+            hEvent = event;
         }
         IocpParam() {
             nOperator = -1;
         }
-    }PPARAM;  //´«ÊäÊı¾İµÄ½á¹¹Ìå
+    }PPARAM;  //Post Paramç”¨äºæŠ•é€’ä¿¡æ¯çš„ç»“æ„ä½“
     enum {
         IocpListPush,
         IocpListPop,
@@ -47,7 +48,7 @@ private:
     static void threadQueueEntry(void* arg);
     void threadWork();
 private:
-	std::list<T> m_Queue;
+	std::list<T> m_lstData;
 	HANDLE m_hCompeletionPort;
 	HANDLE m_nThread;
   

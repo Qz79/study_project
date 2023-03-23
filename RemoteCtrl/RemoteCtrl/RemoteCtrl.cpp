@@ -16,7 +16,7 @@
 
 // 唯一的应用程序对象
 // 001测试分支切换演示
-CWinApp theApp;
+//CWinApp theApp;
 //要传递的数据结
 enum {
     IocpListPush,
@@ -38,13 +38,14 @@ typedef struct IocpParam {
     }
 }IOCP_PARAM;
 //操作完成端口对象的线程
-void threadQueueEntry(HANDLE hIocp) {
-    //HANDLE hIocp==void* arg
-    //该线程对hIocp的里面的数据获取
+void threadWork(HANDLE hIocp) {
+    // HANDLE hIocp == void* arg
+     //该线程对hIocp的里面的数据获取
     std::list<std::string> strList;
     DWORD dwTransferred = 0;
     ULONG_PTR CompletionKey = 0;
     OVERLAPPED* pOverLapped = NULL;
+    int count = 0, count0 = 0;
     while (GetQueuedCompletionStatus(hIocp, &dwTransferred, &CompletionKey, &pOverLapped, INFINITE)) {
         if ((dwTransferred == 0) || (CompletionKey == NULL))
         {
@@ -54,8 +55,9 @@ void threadQueueEntry(HANDLE hIocp) {
         IOCP_PARAM* Param = (IOCP_PARAM*)CompletionKey;
         if (IocpListPush == Param->operate) {
             strList.push_back(Param->strData);
+            count++;
         }
-        else if (IocpListPop == Param->operate ) {
+        else if (IocpListPop == Param->operate) {
             std::string* str = NULL;
             if (strList.size() > 0) {
                 str = new std::string(strList.front());
@@ -64,13 +66,18 @@ void threadQueueEntry(HANDLE hIocp) {
             if (NULL != Param->cbFunc) {
                 Param->cbFunc(str);
             }
+            count0++;
         }
         else if (IocpListEntry == Param->operate) {
             strList.clear();
         }
         delete Param;
     }
-    _endthread();
+    printf("thread is exit count:%d count0:%d\r\n", count, count0);
+}
+void threadQueueEntry(HANDLE hIocp) {
+    threadWork(hIocp);//为防止下述情况发生，利用编译器做出调整
+    _endthread();//线程到此为止，会导致一些对象无法调用自身的析构，从而导致内存泄漏
 }
 //对模拟数据处理的回调函数
 void func(void* arg) {
@@ -95,13 +102,18 @@ int main()
     HANDLE nThread=(HANDLE)_beginthread(threadQueueEntry, 0, hIocp);
     //4.判断完成端口对象，并向其投递信息
     ULONGLONG tick = GetTickCount64();
-    while (_kbhit() != 0) {
-        if (GetTickCount64() - tick > 1300) {//每隔1.3秒触发一次
-            PostQueuedCompletionStatus(hIocp, sizeof(IOCP_PARAM), (ULONG_PTR)new IOCP_PARAM(IocpListPop, "hello world!"), NULL);
+    ULONGLONG tick0 = GetTickCount64();
+    int count = 0, count0 = 0;
+    while (_kbhit() == 0) {
+        if (GetTickCount64() - tick0 > 1300) {//每隔1.3秒触发一次
+            PostQueuedCompletionStatus(hIocp, sizeof(IOCP_PARAM), (ULONG_PTR)new IOCP_PARAM(IocpListPop, "hello world!",func), NULL);
+            tick0 = GetTickCount64();
+            count0++;
         }
         if (GetTickCount64() - tick > 2000) {//每隔2秒触发一次
             PostQueuedCompletionStatus(hIocp, sizeof(IOCP_PARAM), (ULONG_PTR)new IOCP_PARAM(IocpListPush,"hello world!"), NULL);
             tick= GetTickCount64();
+            count++;
         }
         Sleep(1);
     }
@@ -109,6 +121,7 @@ int main()
         PostQueuedCompletionStatus(hIocp, 0, NULL, NULL);
         WaitForSingleObject(nThread, INFINITE);
     }
+   printf("%d,%d", count, count0);
     CloseHandle(hIocp);
     /*CCommand cmd;
     int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
