@@ -5,6 +5,7 @@
 #include "RemoteCtrl.h"
 #include "Command.h"
 #include<conio.h>
+#include"CQueueThread.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -93,36 +94,28 @@ void func(void* arg) {
 int main()
 {
     if (!CTool::init())return 1;
-    //1.声明并初始化一个句柄
-    HANDLE hIocp = INVALID_HANDLE_VALUE;
-    //2.创建完成端口对象
-    hIocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
-    //3.创建线程对完成端口对象进行队列式的获取和添加
     printf("press any key to exit....\r\n");
-    HANDLE nThread=(HANDLE)_beginthread(threadQueueEntry, 0, hIocp);
-    //4.判断完成端口对象，并向其投递信息
+    CQueueThread<std::string> lstString;
     ULONGLONG tick = GetTickCount64();
     ULONGLONG tick0 = GetTickCount64();
-    int count = 0, count0 = 0;
     while (_kbhit() == 0) {
         if (GetTickCount64() - tick0 > 1300) {//每隔1.3秒触发一次
-            PostQueuedCompletionStatus(hIocp, sizeof(IOCP_PARAM), (ULONG_PTR)new IOCP_PARAM(IocpListPop, "hello world!",func), NULL);
+            lstString.PushBack("hello,world");
             tick0 = GetTickCount64();
-            count0++;
+          
         }
         if (GetTickCount64() - tick > 2000) {//每隔2秒触发一次
-            PostQueuedCompletionStatus(hIocp, sizeof(IOCP_PARAM), (ULONG_PTR)new IOCP_PARAM(IocpListPush,"hello world!"), NULL);
+            std::string str;
+            lstString.PopFront(str);
             tick= GetTickCount64();
-            count++;
+            printf("pop from queue:%s\r\n", str.c_str());
         }
         Sleep(1);
     }
-   if (hIocp) {
-        PostQueuedCompletionStatus(hIocp, 0, NULL, NULL);
-        WaitForSingleObject(nThread, INFINITE);
-    }
-   printf("%d,%d", count, count0);
-    CloseHandle(hIocp);
+    printf("exit done! size:%d", lstString.Size());
+    lstString.Clear();
+    printf("exit done! size:%d", lstString.Size());
+    ::exit(0);
     /*CCommand cmd;
     int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
     switch (ret) {
