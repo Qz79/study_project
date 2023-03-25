@@ -1,11 +1,12 @@
 ﻿#pragma once
+                                        /*《对这个此类封装的理解注释版本》*/
 #include<list>
 #include<string>
 #include<atomic>
 #include "pch.h"
 #include<thread>
+                                        /*《对这个此类封装的理解注释版本》*/
 //利用完成端口IOCP封装线程安全队列
-
 template <typename T>
 class CQueueThread
 { //线程安全队列，利用（hIocp）
@@ -17,6 +18,7 @@ public:
         IocpListSize,
         IocpListClear
     };
+    //向完成端口投递信息的结构体
     typedef struct IocpParam {
         size_t nOperator;//操作
         T Data;//数据
@@ -29,8 +31,7 @@ public:
         IocpParam() {
             nOperator = IocpListNone;
         }
-    }PPARAM;  //Post Param用于投递信息的结构体
-
+    }PPARAM;  
 public:
     CQueueThread() {
         m_lock = false;
@@ -60,6 +61,8 @@ public:
             delete pParam;
             return false;
         }
+        // 将构造好的信息投递进完成端口，投递动作完成后此时线程启动
+        // 线程将会处理投递进来的信息，将其插入到m_lstData
         bool ret = PostQueuedCompletionStatus(m_hCompeletionPort, 
             sizeof(PPARAM), (ULONG_PTR)pParam, NULL);
         if (ret == false)delete pParam;
@@ -110,6 +113,7 @@ public:
         return ret;
     }
 private:
+    //此线程就是为了处理投递进完成端口的数据，以及从完成端口取数据
     static void threadQueueEntry(void* arg) {
         CQueueThread<T> *thiz = (CQueueThread<T>*) arg;
         thiz->threadWork();
@@ -178,3 +182,12 @@ private:
 	HANDLE m_nThread;
     std::atomic<bool> m_lock;
 };
+/*问题:
+1.直接封装一个线程进行对std::list的数据直接插入和删除，有什么区别？
+在多线程中使用list会挂，因为list是要先修改size,再进行插入，
+当线程多起来后，可能会出现size修改完还没来得及插入数据，另一个线程就又来访问了
+所以可以尝试对list加锁处理，进行对比。
+2.完成端口究竟起到了什么作用？
+3.工作线程的第一while和第二个while的区别？
+4.工作线程的第二个while的作用是什么？
+*/

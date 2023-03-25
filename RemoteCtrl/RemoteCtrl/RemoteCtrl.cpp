@@ -115,7 +115,7 @@ void test() {
 int main()
 {
     if (!CTool::init())return 1;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10; i++) {
         test();
     }
     /*CCommand cmd;
