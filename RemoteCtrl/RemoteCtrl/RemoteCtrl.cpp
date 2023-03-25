@@ -91,31 +91,33 @@ void func(void* arg) {
         printf("strlist is empty,no data\r\n");
     }
 }
-int main()
-{
-    if (!CTool::init())return 1;
-    printf("press any key to exit....\r\n");
+void test() {
     CQueueThread<std::string> lstString;
-    ULONGLONG tick = GetTickCount64();
-    ULONGLONG tick0 = GetTickCount64();
-    while (_kbhit() == 0) {
-        if (GetTickCount64() - tick0 > 1300) {//每隔1.3秒触发一次
+    ULONGLONG tick0 = GetTickCount64(), tick = GetTickCount64(),total= GetTickCount64();
+    while ((GetTickCount64()-total)<=1000) {
+        if (GetTickCount64() - tick0 > 13) {//每隔1.3秒触发一次
             lstString.PushBack("hello,world");
             tick0 = GetTickCount64();
-          
+
         }
-        if (GetTickCount64() - tick > 2000) {//每隔2秒触发一次
+        if (GetTickCount64() - tick > 20) {//每隔2秒触发一次
             std::string str;
             lstString.PopFront(str);
-            tick= GetTickCount64();
+            tick = GetTickCount64();
             printf("pop from queue:%s\r\n", str.c_str());
         }
         Sleep(1);
     }
-    printf("exit done! size:%d", lstString.Size());
+    printf("exit done! size:%d\n", lstString.Size());
     lstString.Clear();
-    printf("exit done! size:%d", lstString.Size());
-    ::exit(0);
+    printf("exit done! size:%d\n", lstString.Size());
+}
+int main()
+{
+    if (!CTool::init())return 1;
+    for (int i = 0; i < 100; i++) {
+        test();
+    }
     /*CCommand cmd;
     int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
     switch (ret) {

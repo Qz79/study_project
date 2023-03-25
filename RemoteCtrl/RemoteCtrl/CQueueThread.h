@@ -3,12 +3,12 @@
 #include<string>
 #include<atomic>
 #include "pch.h"
-
+#include<thread>
 //利用完成端口IOCP封装线程安全队列
 
 template <typename T>
 class CQueueThread
-{//线程安全队列，利用（hIocp）
+{ //线程安全队列，利用（hIocp）
 public:
     enum {
         IocpListNone,
@@ -40,21 +40,23 @@ public:
         if (m_hCompeletionPort != NULL) {
             m_nThread = (HANDLE)_beginthread(
                 &CQueueThread<T>::threadQueueEntry, 
-                0, m_hCompeletionPort);
+                0, this);
         }
     }
     ~CQueueThread() {
         if (m_lock)return;
         m_lock = true;
-        HANDLE Temp = m_hCompeletionPort;
         PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
         WaitForSingleObject(m_nThread, INFINITE);
-        m_hCompeletionPort = NULL;
-        CloseHandle(Temp);
+        if (m_hCompeletionPort != NULL) {
+            HANDLE Temp = m_hCompeletionPort;         
+            m_hCompeletionPort = NULL;
+            CloseHandle(Temp);
+        }  
     }
     bool PushBack(const T& data) {
         IocpParam* pParam = new IocpParam(IocpListPush, data);
-        if (m_lock == true) {
+        if (m_lock) {
             delete pParam;
             return false;
         }
@@ -76,8 +78,9 @@ public:
             CloseHandle(hEvent);
             return false;
         }
-        ret = WaitForSingleObject(hEvent, INFINTE) == WAIT_OBJECT_0;
-        if (ret) data = pParam.Data;
+        ret = WaitForSingleObject(hEvent,INFINITE) == WAIT_OBJECT_0;
+        if (ret) 
+            data = pParam.Data;
         return ret;
     }
     size_t Size() {
@@ -88,18 +91,19 @@ public:
             return -1;
         }
         bool ret = PostQueuedCompletionStatus(m_hCompeletionPort,
-            sizeof(PPARAM), (ULONG_PTR)&pParam, NULL);
+            sizeof(PPARAM), (ULONG_PTR)&Param, NULL);
         if (ret == false) {
             CloseHandle(hEvent);
             return -1;
         }
-        ret = WaitForSingleObject(hEvent, INFINTE) == WAIT_OBJECT_0;
-        if (ret) return Param.nOperator;
+        ret = WaitForSingleObject(hEvent,INFINITE) == WAIT_OBJECT_0;
+        if (ret) 
+            return Param.nOperator;
         return -1;
     }
-   bool Clear() {
-        IocpParam* pParam = new IocpParam(IocpListPush, T());
-        if (m_lock == true)return false;
+   bool Clear() {     
+        if (m_lock)return false;
+        IocpParam* pParam = new IocpParam(IocpListClear, T());
         bool ret = PostQueuedCompletionStatus(m_hCompeletionPort,
             sizeof(PPARAM), (ULONG_PTR)pParam, NULL);
         if (ret == false)delete pParam;
@@ -107,7 +111,7 @@ public:
     }
 private:
     static void threadQueueEntry(void* arg) {
-        CQueueThread<T>* thiz = CQueueThread<T>*arg;
+        CQueueThread<T> *thiz = (CQueueThread<T>*) arg;
         thiz->threadWork();
         _endthread();
     }
@@ -119,10 +123,10 @@ private:
             break;
         case IocpListPop:
             if (m_lstData.size() > 0) {
-                pParam->Data = m_lstData.front()
-                    m_lstData.pop_front();
+                pParam->Data = m_lstData.front();
+                m_lstData.pop_front();
             }
-            if (NULL != pParam->hEvent)SetEvent(pParam->hEvent;
+            if (NULL != pParam->hEvent) SetEvent(pParam->hEvent);
             break;
         case IocpListSize:
             pParam->nOperator = m_lstData.size();
@@ -152,23 +156,25 @@ private:
             }
             pParam = (PPARAM*)CompletionKey;
             DealParam(pParam);
-            while (GetQueuedCompletionStatus(m_hCompeletionPort,
-                &dwTransferred, &CompletionKey,
-                &pOverLapped, INFINITE)) {
-                if ((dwTransferred == 0) || (CompletionKey == NULL)){
-                    printf("thread is prepare to exit\r\n");
-                    continue;
-                }
-                pParam = (PPARAM*)CompletionKey;
-                DealParam(pParam);
         }
-        CloseHandle(m_hCompeletionPort);
+        //第二次做while的作用是？
+        while (GetQueuedCompletionStatus(m_hCompeletionPort,
+                &dwTransferred, &CompletionKey,
+            &pOverLapped, 0)) {
+            if ((dwTransferred == 0) || (CompletionKey == NULL)) {
+                printf("thread is prepare to exit\r\n");
+                continue;
+            }
+            pParam = (PPARAM*)CompletionKey;
+            DealParam(pParam);
+        }
+        HANDLE Temp = m_hCompeletionPort;
+        m_hCompeletionPort = NULL;
+        CloseHandle(Temp);
     }
-
 private:
 	std::list<T> m_lstData;
 	HANDLE m_hCompeletionPort;
 	HANDLE m_nThread;
     std::atomic<bool> m_lock;
 };
-
