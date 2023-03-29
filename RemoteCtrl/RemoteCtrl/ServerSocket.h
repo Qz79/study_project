@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "pch.h"
 #include "framework.h"
 #include<string>
@@ -9,7 +9,7 @@ class CServerSocket
 {
 public:
 	static CServerSocket* getInstance() {
-		//¾²Ì¬º¯ÊıÃ»ÓĞthisÖ¸Õë£¬ËùÒÔÎŞ·¨·ÃÎÊ³ÉÔ±±äÁ¿
+		//é™æ€å‡½æ•°æ²¡æœ‰thisæŒ‡é’ˆï¼Œæ‰€ä»¥æ— æ³•è®¿é—®æˆå‘˜å˜é‡
 		if (m_istance == NULL) {
 			m_istance = new CServerSocket();
 		}
@@ -18,7 +18,7 @@ public:
 	bool InitSocket(short port) {
 		if (m_servsock == -1)return false;
 		sockaddr_in serv_addr;
-		memset(&serv_addr, 0, sizeof(serv_addr));//¶Ô½á¹¹Ìå±äÁ¿³õÊ¼»¯
+		memset(&serv_addr, 0, sizeof(serv_addr));//å¯¹ç»“æ„ä½“å˜é‡åˆå§‹åŒ–
 		serv_addr.sin_family = AF_INET;
 		serv_addr.sin_addr.s_addr = INADDR_ANY;
 		serv_addr.sin_port = htons(port);
@@ -60,18 +60,18 @@ protected:
 		TRACE("sever->m_clisock:%d\r\n", m_clisock);
 		if (m_clisock == -1)return false;
 		return true;
-		//closesocket(cli_sock);//TODO:Á´½Ó¿Í»§¶ËµÄÌ×½Ó×ÖÊ²Ã´Ê±ºòÊÍ·Å£¿
+		//closesocket(cli_sock);//TODO:é“¾æ¥å®¢æˆ·ç«¯çš„å¥—æ¥å­—ä»€ä¹ˆæ—¶å€™é‡Šæ”¾ï¼Ÿ
 	}
 #define BUFFER_SIZE 409600
 	int  DealCommand() {
-		//´¦ÀíÁ´½Ó
+		//å¤„ç†é“¾æ¥
 		TRACE("sever deal is start\r\n");
 		if (m_clisock == -1)return -1;
 		char* buffer = new char[BUFFER_SIZE];
 		memset(buffer, 0, BUFFER_SIZE);
-		size_t index = 0;//±ê¼Ç»º³åÇøbufferµÄÏÂ±ê
+		size_t index = 0;//æ ‡è®°ç¼“å†²åŒºbufferçš„ä¸‹æ ‡
 		while (true) {
-			//len ½ÓÊÕµ½Êı¾İµÄ´óĞ¡
+			//len æ¥æ”¶åˆ°æ•°æ®çš„å¤§å°
 			size_t len=recv(m_clisock, buffer+index, BUFFER_SIZE -index, 0);
 			if (len <= 0) {
 				return -1;
@@ -79,7 +79,7 @@ protected:
 			}
 			index += len;
 			len = index;
-			//TODO:´¦ÀíÃüÁî
+			//TODO:å¤„ç†å‘½ä»¤
 			m_packet = CPacket ((BYTE*)buffer, len);
 			if (len > 0) {
 				memmove(buffer, buffer + len, BUFFER_SIZE - len);
@@ -135,10 +135,10 @@ private:
 		m_servsock = INVALID_SOCKET;
 		m_clisock = INVALID_SOCKET;
 		if (InitSockEnv() == FALSE) {
-			MessageBox(NULL, _T("ÎŞ·¨³õÊ¼Ì×½Ó×Ö»·¾³,Çë¼ìÍøÂçÉèÖÃ"), _T("ÍøÂç»·¾³³õÊ¼»¯Ê§°Ü"), MB_OK | MB_ICONERROR);
+			MessageBox(NULL, _T("æ— æ³•åˆå§‹å¥—æ¥å­—ç¯å¢ƒ,è¯·æ£€ç½‘ç»œè®¾ç½®"), _T("ç½‘ç»œç¯å¢ƒåˆå§‹åŒ–å¤±è´¥"), MB_OK | MB_ICONERROR);
 			exit(0);
 		}
-		m_servsock = socket(PF_INET, SOCK_STREAM, 0);//³õÊ¼»¯Ì×½Ó×Ö
+		m_servsock = socket(PF_INET, SOCK_STREAM, 0);//åˆå§‹åŒ–å¥—æ¥å­—
 	}
 	~CServerSocket(){
 		closesocket(m_servsock);
@@ -146,7 +146,7 @@ private:
 	}
 	BOOL InitSockEnv() {
 		WSADATA wsadata;
-		if (WSAStartup(MAKEWORD(1, 1), &wsadata) != 0) {
+		if (WSAStartup(MAKEWORD(2, 0), &wsadata) != 0) {
 			return FALSE;
 		}
 		return TRUE;
