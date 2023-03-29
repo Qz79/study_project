@@ -2,6 +2,10 @@
 #include<Windows.h>
 #include<thread>
 #include <afxwin.h>
+/*此线程存在弊端：
+就是当线程结束的时候，要重新再给此线程布置任务的时候，就又要重新开启一个线程
+而开线程是消耗一定时间的，所以这个类是需要改进的
+*/
 class ThreadPool {
 public:
 	ThreadPool() {
