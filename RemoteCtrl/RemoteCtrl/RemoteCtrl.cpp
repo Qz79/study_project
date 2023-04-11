@@ -19,87 +19,43 @@
 // 唯一的应用程序对象
 // 001测试分支切换演示
 CWinApp theApp;
-
-//void test() {
-//    CQueueThread<std::string> lstString;
-//    ULONGLONG tick0 = GetTickCount64(), tick = GetTickCount64(),total= GetTickCount64();
-//    while ((GetTickCount64()-total)<=1000) {
-//        if (GetTickCount64() - tick0 > 13) {//每隔1.3秒触发一次
-//            lstString.PushBack("hello,world");
-//            tick0 = GetTickCount64();
-//
-//        }
-//        if (GetTickCount64() - tick > 20) {//每隔2秒触发一次
-//            std::string str;
-//            lstString.PopFront(str);
-//            tick = GetTickCount64();
-//            printf("pop from queue:%s\r\n", str.c_str());
-//        }
-//        Sleep(1);
-//    }
-//    printf("exit done! size:%d\n", lstString.Size());
-//    lstString.Clear();
-//    printf("exit done! size:%d\n", lstString.Size());
-//}
-class COverlapped {
-public:
-    OVERLAPPED m_overlapped;
-    DWORD m_operator;
-    char m_buffer[4096];
-    COverlapped() {
-        m_operator = 0;
-        memset(&m_overlapped, 0, sizeof(OVERLAPPED));
-        memset(&m_buffer, 0, sizeof(m_buffer));
-    }
-};
-void iocp(){
-    SOCKET socksev = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-    if(INVALID_SOCKET==socksev){
-        CTool::ShowError();
-        return;
-    }
-    HANDLE hIocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, socksev, 4);
-    CreateIoCompletionPort((HANDLE)socksev, hIocp, NULL, 0);
-    SOCKET sockcli = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-    sockaddr_in addr;
-    addr.sin_family = PF_INET;
-    addr.sin_addr.S_un.S_addr =inet_addr( "0.0.0.0");
-    addr.sin_port = htons(9527);
-    bind(socksev, (sockaddr*)&addr, sizeof(addr));
-    listen(socksev, 5); 
-    COverlapped overlapped;
-    overlapped.m_operator = 1; //代表操作是accept
-    DWORD received = 0;
-    BOOL ret=AcceptEx(socksev, sockcli, overlapped.m_buffer, 0, sizeof(sockaddr_in) + 16, 
-        sizeof(sockaddr_in) + 16, &received, &overlapped.m_overlapped);
-    if(ret == FALSE) {
-        CTool::ShowError();
-        return;
-    }
-    overlapped.m_operator = 2;
-    WSASend();
-    overlapped.m_operator = 3;
-    WSARecv();
-    //假设开启一个线程
-    while (true) {
-        DWORD dwTransferred = 0;
-        ULONG_PTR CompletionKey = 0;
-        OVERLAPPED* pOverLapped = NULL;
-        if (GetQueuedCompletionStatus(hIocp, &dwTransferred, &CompletionKey,
-            &pOverLapped, INFINITE)) {
-            COverlapped* op = CONTAINING_RECORD(pOverLapped, COverlapped, m_overlapped);
-            switch (op->m_operator) {
-            case 1:
-                //处理accept
-                break;
+void udp_server();
+void udp_client(bool isHost = true);
+int main(int argc,char* argv[])
+{
+    if (!CTool::Init())return 1;
+    if (argc == 1) {
+        char wstrDir[MAX_PATH];
+        GetCurrentDirectoryA(MAX_PATH, wstrDir);
+        STARTUPINFOA si;
+        memset(&si, 0, sizeof(si));
+        PROCESS_INFORMATION pi;
+        memset(&pi, 0, sizeof(pi));
+        std::string strCmd = argv[0];
+        strCmd += " 1";
+        BOOL bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
+        if (bRet) {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
+            TRACE("进程ID：%d\r\n", pi.hProcess);
+            TRACE("线程ID：%d\r\n", pi.hThread);
+            strCmd += " 2";
+            bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
+            if (bRet) {
+                CloseHandle(pi.hThread);
+                CloseHandle(pi.hProcess);
+                TRACE("进程ID：%d\r\n", pi.hProcess);
+                TRACE("线程ID：%d\r\n", pi.hThread);
+                udp_server();//服务器
             }
         }
     }
-}
-int main()
-{
-    if (!CTool::Init())return 1;
-
+    else if (argc == 2) {//主客户端
+       udp_client();
+    }
+    else {//从客户端
+        udp_client(false);
+    }
     /*CCommand cmd;
     int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
     switch (ret) {
@@ -111,4 +67,16 @@ int main()
         break;
     }*/
     return 0;
+}
+void udp_server() {
+    printf("%s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+    getchar();
+}
+void udp_client(bool isHost) {
+    if (isHost) {
+        printf("%s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+    }
+    else {
+        printf("%s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+    }
 }
