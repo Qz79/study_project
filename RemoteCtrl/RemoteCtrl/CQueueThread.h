@@ -1,11 +1,11 @@
 ﻿#pragma once
-                                        /*《对这个此类封装的理解注释版本》*/
+                                                         /*《对这个此类封装的理解注释版本》*/
 #include<list>
 #include<string>
 #include<atomic>
 #include "pch.h"
 #include<thread>
-                                        /*《对这个此类封装的理解注释版本》*/
+#include"ThreadPool.h"                                   /*《对这个此类封装的理解注释版本》*/
 //利用完成端口IOCP封装线程安全队列
 template <typename T>
 class CQueueThread
@@ -35,6 +35,8 @@ public:
 public:
     CQueueThread() {
         m_lock = false;
+
+        //此处创建完成端口的意义是什么？
         m_hCompeletionPort= CreateIoCompletionPort(
             INVALID_HANDLE_VALUE, NULL, NULL, 1);
         m_nThread = INVALID_HANDLE_VALUE;
@@ -44,7 +46,7 @@ public:
                 0, this);
         }
     }
-    ~CQueueThread() {
+    virtual ~CQueueThread() {
         if (m_lock)return;
         m_lock = true;
         PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
@@ -68,7 +70,7 @@ public:
         if (ret == false)delete pParam;
         return ret;
     }
-    bool PopFront(T& data) {   
+    virtual bool PopFront(T& data) {   
         HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
         IocpParam pParam (IocpListPop, data, hEvent);
         if (m_lock == true) {
@@ -112,8 +114,8 @@ public:
         if (ret == false)delete pParam;
         return ret;
     }
-private:
-    //此线程就是为了处理投递进完成端口的数据，以及从完成端口取数据
+protected:
+    //此线程就是为了处理投递进 完成端口 的数据，以及从完成端口取数据
     static void threadQueueEntry(void* arg) {
         CQueueThread<T> *thiz = (CQueueThread<T>*) arg;
         thiz->threadWork();
@@ -182,6 +184,83 @@ private:
 	HANDLE m_nThread;
     std::atomic<bool> m_lock;
 };
+template <class T>
+class MySendQueue :public CQueueThread<T>, public ThreadFuncBase {
+public:
+    typedef int(ThreadFuncBase::* EDYCALLBACK)(T& data);
+    MySendQueue(ThreadFuncBase* obj, EDYCALLBACK callback)
+        :CQueueThread<T>(), m_base(obj), m_callback(callback)
+    {
+        m_thread.Start();
+        m_thread.UpdateWorker(::ThreadWorker(this,(FUNCTYPE)&MySendQueue<T>::threadTick))
+    }
+    virtual ~MySendQueue() {
+        m_base = NULL;
+        m_callback = NULL;
+        m_thread.Stop();
+    }
+protected:
+    virtual bool PopFront(T& data) {
+        return false;
+    }
+    bool PopFront() {
+        typename CQueueThread<T>::IocpParam* Param = new typename CQueueThread<T>::IocpParam(CQueueThread<T>::IocpListPop, T());
+        if (CQueueThread<T>::m_lock) {
+            delete Param;
+            return false;
+        }
+        bool ret = PostQueuedCompletionStatus(CQueueThread<T>::m_hCompeletionPort, sizeof(*Param), (ULONG_PTR)&Param, NULL);
+        if (ret == false) {
+            delete Param;
+            return false;
+        }
+        return ret;
+    }
+    int threadTick() {
+        if (WaitForSingleObject(CQueueThread<T>::m_hThread, 0) != WAIT_TIMEOUT)
+            return 0;
+        if (CQueueThread<T>::m_lstData.size() > 0) {
+            PopFront();
+        }
+        return 0;
+    }
+    virtual void DealParam(typename CQueueThread<T>::PPARAM* pParam) {
+        switch (pParam->nOperator)
+        {
+        case CQueueThread<T>::IocpListPush:
+            CQueueThread<T>::m_lstData.push_back(pParam->Data);
+            delete pParam;
+            
+            break;
+        case CQueueThread<T>::IocpListPop:
+            if (CQueueThread<T>::m_lstData.size() > 0) {
+                pParam->Data = CQueueThread<T>::m_lstData.front();
+                if ((m_base->*m_callback)(pParam->Data) == 0)
+                    CQueueThread<T>::m_lstData.pop_front();
+            }
+            delete pParam;
+            break;
+        case CQueueThread<T>::IocpListSize:
+            pParam->nOperator = CQueueThread<T>::m_lstData.size();
+            if (pParam->hEvent != NULL)
+                SetEvent(pParam->hEvent);
+            break;
+        case CQueueThread<T>::IocpListClear:
+            CQueueThread<T>::m_lstData.clear();
+            delete pParam;
+            //printf("delete %08p\r\n", (void*)pParam);
+            break;
+        default:
+            OutputDebugStringA("unknown operator!\r\n");
+            break;
+        }
+    }
+private:
+    ThreadFuncBase* m_base;
+    EDYCALLBACK m_callback;
+    CThread m_thread;
+};
+typedef MySendQueue<std::vector<char>>::EDYCALLBACK  SENDCALLBACK;
 /*问题:
 1.直接封装一个线程进行对std::list的数据直接插入和删除，有什么区别？
 在多线程中使用list会挂，因为list是要先修改size,再进行插入，
