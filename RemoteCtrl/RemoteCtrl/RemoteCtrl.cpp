@@ -73,6 +73,7 @@ void udp_server() {
     getchar();
 }
 void udp_client(bool isHost) {
+    Sleep(2000);
     if (isHost) {
         printf("%s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
     }
