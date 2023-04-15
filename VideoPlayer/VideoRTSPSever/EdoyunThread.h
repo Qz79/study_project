@@ -12,6 +12,7 @@ void ETrace(const char* format, ...) {
 	sBuffer.resize(1024 * 10);
 	vsprintf((char*)(sBuffer.c_str()), format, ap);
 	OutputDebugStringA(sBuffer.c_str());
+	va_end(ap);
 }
 #ifndef TRACE
 #define TRACE ETrace
