@@ -139,9 +139,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="RTSPServer.cpp" />
     <ClCompile Include="VideoRTSPSever.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EdoyunThread.h" />
+    <ClInclude Include="RTSPServer.h" />
     <ClInclude Include="Socket.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
