@@ -1,10 +1,14 @@
 ﻿
 #include <iostream>
-#include"Socket.h"
+#include"RTSPServer.h"
 
 int main()
 {
-    SockerIniter init;
+    RTSPServer server;
+    server.Init();
+    server.Invoke();
+    getchar();
+    server.Stop(); 
     return 0;
 }
 
