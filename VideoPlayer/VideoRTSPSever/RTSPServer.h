@@ -26,10 +26,15 @@ private:
 
 class RTSPSession{
 public:
-	RTSPSession();
+	RTSPSession(){}
+	RTSPSession(const ZSocket& client);
 	RTSPSession(const RTSPSession& session);
+	int PickRequestAndReply();
 	RTSPSession& operator=(const RTSPSession& session);
 	~RTSPSession();
+private:
+	ZSocket m_client;
+	std::string m_id;
 };
 class RTSPServer:public ThreadFuncBase
 {
@@ -44,8 +49,8 @@ public:
 protected:
 	//返回 0 继续，返回负数终止，返回其他警告
 	int threadWorker();
-	RTSPRequest AnalyseRequest(const std::string& data);
-	RTSPReply MakeReply(const RTSPRequest& request);
+	//RTSPRequest AnalyseRequest(const std::string& data);
+	//RTSPReply MakeReply(const RTSPRequest& request);
 	int threadSession();
 private:
 	ZSocket m_sock;
@@ -53,8 +58,8 @@ private:
 	NetAddress m_addr;
 	EdoyunThread m_threadMain;
 	EdoyunThreadPool m_pool;
-	std::map<std::string, RTSPSession> m_mapSession;
+	//std::map<std::string, RTSPSession> m_mapSession;
 	static SockerIniter init;
-	CEdoyunQueue<ZSocket> m_clients;
+	CEdoyunQueue<RTSPSession> m_lstSession;
 };
 

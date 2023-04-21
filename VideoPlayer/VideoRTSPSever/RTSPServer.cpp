@@ -1,5 +1,5 @@
 ﻿#include "RTSPServer.h"
-
+#include"rpc.h"
 int RTSPServer::Init(const std::string& ip, short port)
 {
     m_addr.Update(ip, port);
@@ -31,25 +31,27 @@ int RTSPServer::threadWorker()
     NetAddress addr;
     SOCKET clinet = m_sock.Accpect(addr);
     if (clinet != INVALID_SOCKET) {
-        m_clients.PushBack(clinet);
+        RTSPSession session(clinet);
+        m_lstSession.PushBack(session);
         m_pool.DispatchWorker(ThreadWorker(this, (FUNCTYPE)RTSPServer::threadSession));
     } 
     return 0;
 }
-
+/*在接收请求的时候直接构造RTSPSession和clinet套接字绑定，同时为每个Session搞上独有的ID，最后将其插入到安全队列中*/
 int RTSPServer::threadSession()
-{ //TODO:接收数据请求 解析请求 应答请求
-  //TODO:需要客户端的套接字，需要传参
-    ZSocket client;//TODO:假设这里拿到了客户端对应的套接字
-    EBuffer buffer(1024*16);
-    int len=client.Recv(buffer);
-    if (len <= 0) {
-        //TODO:做清理client动作
-        return -1;
+{ 
+    RTSPSession session;
+    if (m_lstSession.PopFront(session)) {
+        return session.PickRequestAndReply();
     }
-    buffer.resize(len);
-    RTSPRequest req = AnalyseRequest(buffer);
-    RTSPReply rep = MakeReply(req);
-    client.Send(rep.toBuffer());
-    return 0;
+    return -1;
+}
+
+RTSPSession::RTSPSession(const ZSocket& client)
+    :m_client(client)
+{
+    UUID uid;
+    UuidCreate(&uid);
+    m_id.resize(8);
+    snprintf((char*)m_id.c_str(),m_id.size(), "08%d", uid.Data1);
 }

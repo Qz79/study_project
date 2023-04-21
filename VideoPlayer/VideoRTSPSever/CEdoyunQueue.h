@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "pch.h"
 #include <atomic>
 #include <list>
 #include "EdoyunThread.h"
